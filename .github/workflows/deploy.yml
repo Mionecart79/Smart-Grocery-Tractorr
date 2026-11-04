@@ -99,6 +99,35 @@ jobs:
             .git
             .github
 
+      - name: Output Live Web URLs & QR Code
+        run: |
+          REPO_OWNER="${{ github.repository_owner }}"
+          REPO_NAME="${{ github.event.repository.name }}"
+          PAGES_URL="https://${REPO_OWNER,,}.github.io/${REPO_NAME}/"
+          
+          echo "::notice title=🚀 Web Live URL::Buka di smartphone atau browser: ${PAGES_URL}"
+          
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          # 🛒 Smart Grocery & Budget Safety Tracker Widihh
+
+          ### 🌐 Link URL Web Live:
+          👉 **[Klik Disini untuk Buka Aplikasi](${PAGES_URL})**
+          
+          \`${PAGES_URL}\`
+
+          ---
+
+          ### 📱 Scan Barcode Langsung dari Layar HP:
+          <p align="center">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${PAGES_URL}" alt="Scan QR Code untuk buka di smartphone" width="200" height="200" />
+          </p>
+
+          > **💡 Cara Pasang di HP (PWA Standalone):**
+          > 1. Buka link di atas melalui browser Chrome (Android) atau Safari (iOS).
+          > 2. Tekan menu peramban lalu pilih **"Add to Home Screen"** / **"Tambahkan ke Layar Utama"**.
+          > 3. Aplikasi siap digunakan sambil dorong troli supermarket tanpa was-was boncos!
+          EOF
+
   deploy-actions-pages:
     name: 🌐 Deploy via GitHub Pages Actions
     runs-on: ubuntu-latest

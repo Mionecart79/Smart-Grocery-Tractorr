@@ -1,6 +1,32 @@
 # 🛒 Smart Grocery & Budget Safety Tracker Widihh
 
-Aplikasi web mobile PWA (**Progressive Web App**) bergaya native app yang dirancang khusus untuk seorang **siswa/mahasiswa rantau** yang belanja bulanan sambil mendorong troli di supermarket tanpa rasa was-was boncos di kasir.
+<p align="center">
+  <img src="icons/icon-192.png" width="96" height="96" alt="Widihh Grocery Logo" />
+  <br>
+  <strong>Aplikasi Web Mobile PWA Belanja Bulanan Anak Rantau Anti-Boncos di Supermarket</strong>
+</p>
+
+<p align="center">
+  <a href="https://mionecart79.github.io/Smart-Grocery-Tractorr/">
+    <img src="https://img.shields.io/badge/🌐_Buka_Web_Live-GitHub_Pages-2ea44f?style=for-the-badge" alt="Live Demo" />
+  </a>
+  <a href="https://github.com/Mionecart79/Smart-Grocery-Tractorr/actions/workflows/deploy.yml">
+    <img src="https://github.com/Mionecart79/Smart-Grocery-Tractorr/actions/workflows/deploy.yml/badge.svg" alt="PWA CI/CD" />
+  </a>
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMionecart79%2FSmart-Grocery-Tractorr">
+    <img src="https://vercel.com/button" alt="Deploy with Vercel" />
+  </a>
+</p>
+
+---
+
+## 🌐 Link Web Live Resmi:
+👉 **[https://mionecart79.github.io/Smart-Grocery-Tractorr/](https://mionecart79.github.io/Smart-Grocery-Tractorr/)**
+
+### 📱 Scan Barcode dengan Kamera HP:
+<p align="left">
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://mionecart79.github.io/Smart-Grocery-Tractorr/" alt="QR Code Belanja" width="180" height="180" />
+</p>
 
 ---
 
@@ -81,10 +107,9 @@ Nama barang
 ## 🚀 Cara Menjalankan & Memasang di HP (PWA)
 
 ### Di Laptop / Komputer:
-1. Buka file `index.html` langsung di browser favorit Anda (Google Chrome, Edge, Safari, atau Firefox).
-2. Tampilan akan otomatis terpusat di tengah layar (*centered*) dalam rasio smartphone 430px.
+1. Buka file `index.html` langsung di browser favorit Anda, atau buka link live: [https://mionecart79.github.io/Smart-Grocery-Tractorr/](https://mionecart79.github.io/Smart-Grocery-Tractorr/).
 
 ### Di Smartphone (Android / iPhone):
-1. Buka URL atau hosting aplikasi di Chrome (Android) atau Safari (iOS).
+1. Buka link web di peramban Chrome (Android) atau Safari (iOS).
 2. Tekan menu browser lalu pilih **"Add to Home Screen"** / **"Tambahkan ke Layar Utama"**.
 3. Aplikasi akan terpasang sebagai **Aplikasi Native Standalone** tanpa address bar browser!
