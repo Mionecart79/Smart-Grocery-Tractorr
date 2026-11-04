@@ -85,6 +85,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate-and-test
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    environment:
+      name: Live Website (GitHub Pages)
+      url: https://mionecart79.github.io/Smart-Grocery-Tractorr/
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -99,33 +102,50 @@ jobs:
             .git
             .github
 
-      - name: Output Live Web URLs & QR Code
+      - name: Output Live Web URLs & Review Guide for Evaluator/Guru
         run: |
           REPO_OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
           PAGES_URL="https://${REPO_OWNER,,}.github.io/${REPO_NAME}/"
+          SETTINGS_PAGES_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/settings/pages"
+          VERCEL_DEPLOY_URL="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2F${REPO_OWNER}%2F${REPO_NAME}"
           
-          echo "::notice title=🚀 Web Live URL::Buka di smartphone atau browser: ${PAGES_URL}"
+          echo "::notice title=🌐 LINK WEB LIVE PENGUJIAN GURU::${PAGES_URL}"
           
           cat << EOF >> $GITHUB_STEP_SUMMARY
           # 🛒 Smart Grocery & Budget Safety Tracker Widihh
 
-          ### 🌐 Link URL Web Live:
-          👉 **[Klik Disini untuk Buka Aplikasi](${PAGES_URL})**
-          
-          \`${PAGES_URL}\`
+          ## 🌐 Tautan Web Live (Siap Diuji Langsung oleh Guru):
+          ### 👉 **[BUKA APLIKASI WEB LIVE (GITHUB PAGES)](${PAGES_URL})**
+          **URL Publik:** \`${PAGES_URL}\`
 
           ---
 
-          ### 📱 Scan Barcode Langsung dari Layar HP:
+          ### 📱 Uji Coba di Smartphone (Scan Barcode):
+          Arahkan kamera smartphone ke kode QR di bawah untuk membuka dan memasang aplikasi secara instan (*Add to Home Screen*):
+
           <p align="center">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${PAGES_URL}" alt="Scan QR Code untuk buka di smartphone" width="200" height="200" />
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${PAGES_URL}" alt="Scan QR Code PWA" width="220" height="220" />
           </p>
 
-          > **💡 Cara Pasang di HP (PWA Standalone):**
-          > 1. Buka link di atas melalui browser Chrome (Android) atau Safari (iOS).
-          > 2. Tekan menu peramban lalu pilih **"Add to Home Screen"** / **"Tambahkan ke Layar Utama"**.
-          > 3. Aplikasi siap digunakan sambil dorong troli supermarket tanpa was-was boncos!
+          ---
+
+          ### ⚡ Opsi Alternatif: Live di Vercel (1-Click Deployment)
+          Jika ingin membuka alternatif instan di Vercel:
+          👉 **[Deploy ke Vercel via GitHub (${REPO_NAME})](${VERCEL_DEPLOY_URL})**
+
+          ---
+
+          ### 📝 Panduan Singkat untuk Guru / Penilai:
+          1. **Pilih Daerah & Supermarket**: Coba filter daerah (misal: *Jakarta Barat* ➔ *Lotte Mart Grocery - Puri Indah*).
+          2. **Tentukan Budget**: Ketik nominal budget (misal: *Rp 250.000*) lalu klik tombol **Confirm**. Perhatikan bahwa budget terkunci otomatis.
+          3. **Tab Store**: Klik **Add to list** pada produk diskon (rumus: \`Harga2 = Harga - (Diskon * Harga)\`) dan perhatikan tren inflasi (⬆ merah, ⬇︎ hijau, = kuning). Sisa budget di pojok kanan atas akan berkurang secara live.
+          4. **Tab List (Keranjang)**: Perhatikan transisi warna font total belanja yang awalnya **Coklat (\`#622B14\`)** fading secara mulus menjadi **Full Merah** saat budget habis. Gunakan kontrol quantity \`- [ ] +\` dan tombol hapus \`X\`.
+          5. **Checkout**: Kunci belanjaan dengan tombol **Checkout**, dan lihat struk belanja tersimpan rapi di tab **History**.
+
+          ---
+          > ⚠️ **Catatan Aktivasi Pertama Kali di GitHub Pages:**
+          > Pastikan di repository settings [**Settings > Pages**](${SETTINGS_PAGES_URL}) telah dipilih **Source: Deploy from a branch** dengan branch **\`gh-pages\`**.
           EOF
 
   deploy-actions-pages:
