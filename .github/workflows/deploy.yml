@@ -1,0 +1,107 @@
+name: Deploy PWA to GitHub Pages & Quality Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  validate-and-test:
+    name: Validate PWA Integrity & Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify Core PWA Files Exist
+        run: |
+          echo "Verifying PWA asset structure..."
+          test -f index.html || (echo "Missing index.html" && exit 1)
+          test -f styles.css || (echo "Missing styles.css" && exit 1)
+          test -f app.js || (echo "Missing app.js" && exit 1)
+          test -f sw.js || (echo "Missing sw.js" && exit 1)
+          test -f manifest.json || (echo "Missing manifest.json" && exit 1)
+          test -f icons/icon-192.png || (echo "Missing icon-192.png" && exit 1)
+          test -f icons/icon-512.png || (echo "Missing icon-512.png" && exit 1)
+          echo "All essential PWA files exist!"
+
+      - name: Validate manifest.json
+        run: |
+          node -e "
+            const manifest = require('./manifest.json');
+            if (!manifest.name || !manifest.start_url || !manifest.icons) {
+              console.error('Invalid manifest.json structure');
+              process.exit(1);
+            }
+            console.log('manifest.json validated successfully: ' + manifest.name);
+          "
+
+      - name: Syntax Check JavaScript (app.js & sw.js)
+        run: |
+          node --check app.js
+          node --check sw.js
+          echo "JavaScript syntax checks passed!"
+
+      - name: Validate HTML Structure & PWA Meta Tags
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('index.html', 'utf8');
+            const checks = [
+              { name: 'Viewport Meta', test: /meta\s+name=[\"']viewport[\"']/i },
+              { name: 'Manifest Link', test: /link\s+rel=[\"']manifest[\"']/i },
+              { name: 'App Script Tag', test: /script\s+src=[\"']app\.js[\"']/i },
+              { name: 'Stylesheet Link', test: /link\s+rel=[\"']stylesheet[\"']/i }
+            ];
+            for (const c of checks) {
+              if (!c.test.test(html)) {
+                console.error('HTML check failed: ' + c.name);
+                process.exit(1);
+              }
+            }
+            console.log('All HTML & PWA meta tag checks passed!');
+          "
+
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: validate-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
