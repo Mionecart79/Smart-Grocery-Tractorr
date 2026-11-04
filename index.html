@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Smart Grocery & Budget Safety Tracker Widihh</title>
+  <meta name="description" content="Aplikasi mobile belanja bulanan hemat & anti-boncos untuk anak rantau sambil mendorong troli supermarket.">
+  <meta name="theme-color" content="#8EE4AF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Widihh Grocery">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Google Fonts: Plus Jakarta Sans for aesthetic modern Indonesian mobile UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Mobile Screen Frame Container (Max 430px, 9:16 Aspect ratio centered on desktop) -->
+  <div class="mobile-wrapper">
+    <div class="mobile-device">
+      
+      <!-- Top Status Bar Simulation for Native Feel -->
+      <header class="status-bar">
+        <div class="status-left">
+          <span class="status-time" id="statusTime">09:41</span>
+          <span class="status-badge-rantau">🎒 Anak Rantau Mode</span>
+        </div>
+        <div class="status-right">
+          <span class="status-signal">●●●●</span>
+          <span class="status-wifi">📶</span>
+          <span class="status-battery">100% 🔋</span>
+        </div>
+      </header>
+
+      <!-- SCREEN 1: Setup Supermarket & Budget Safety -->
+      <section id="setupScreen" class="screen active-screen">
+        <div class="setup-container">
+          <div class="setup-hero">
+            <div class="hero-icon-badge">🛒</div>
+            <h1 class="app-title">Smart Grocery & Budget Safety Tracker</h1>
+            <div class="app-subtitle-pill">✨ Widihh Trolley Companion ✨</div>
+            <p class="setup-tagline">Teman setia anak rantau belanja bulanan di supermarket tanpa takut boncos di kasir!</p>
+          </div>
+
+          <form id="setupForm" class="setup-card" onsubmit="event.preventDefault(); handleConfirmSetup();">
+            <!-- 1. Pemilihan Daerah -->
+            <div class="form-group">
+              <label for="regionSelect" class="form-label">
+                <i data-lucide="map-pin"></i> 1. Pilih Wilayah / Daerah
+              </label>
+              <div class="custom-select-wrapper">
+                <select id="regionSelect" class="custom-select" required onchange="handleRegionChange()">
+                  <option value="" disabled selected>Pilih Daerah Supermarket...</option>
+                  <option value="Jakarta Barat">Jakarta Barat</option>
+                  <option value="Tangerang & Gading Serpong">Tangerang & Gading Serpong</option>
+                  <option value="BSD City">BSD City</option>
+                  <option value="Sekitar Kampus">Sekitar Kampus / Kosan</option>
+                </select>
+                <i data-lucide="chevron-down" class="select-arrow"></i>
+              </div>
+            </div>
+
+            <!-- 2. Pemilihan Supermarket (Filtered) -->
+            <div class="form-group">
+              <label for="supermarketSelect" class="form-label">
+                <i data-lucide="store"></i> 2. Pilih Supermarket
+              </label>
+              <div class="custom-select-wrapper">
+                <select id="supermarketSelect" class="custom-select" required disabled>
+                  <option value="" disabled selected>Pilih daerah di atas terlebih dahulu</option>
+                </select>
+                <i data-lucide="chevron-down" class="select-arrow"></i>
+              </div>
+              <small class="helper-text" id="supermarketHelper">Tersedia pilihan supermarket resmi sesuai daerah.</small>
+            </div>
+
+            <!-- 3. Budget Belanja Bulanan -->
+            <div class="form-group">
+              <label for="budgetInput" class="form-label">
+                <i data-lucide="wallet"></i> 3. Budget Maksimal (Batas Belanja)
+              </label>
+              <div class="budget-input-wrapper">
+                <span class="currency-prefix">Rp</span>
+                <input 
+                  type="text" 
+                  id="budgetInput" 
+                  class="budget-input" 
+                  placeholder="350.000" 
+                  inputmode="numeric" 
+                  pattern="[0-9.]*"
+                  required 
+                  oninput="handleBudgetFormat(this)"
+                  autocomplete="off"
+                >
+              </div>
+              <div class="budget-presets">
+                <button type="button" class="preset-chip" onclick="setPresetBudget(150000)">150rb</button>
+                <button type="button" class="preset-chip" onclick="setPresetBudget(300000)">300rb</button>
+                <button type="button" class="preset-chip" onclick="setPresetBudget(500000)">500rb</button>
+                <button type="button" class="preset-chip" onclick="setPresetBudget(1000000)">1 Juta</button>
+              </div>
+              <div class="budget-lock-warning">
+                <i data-lucide="lock"></i>
+                <span>Budget <strong>TIDAK BISA DIUBAH</strong> setelah masuk tab belanja agar disiplin!</span>
+              </div>
+            </div>
+
+            <!-- 4. Tombol Confirm -->
+            <button type="submit" id="btnConfirmSetup" class="btn-confirm-setup">
+              <span>Confirm & Ambil Data Toko</span>
+              <i data-lucide="arrow-right"></i>
+            </button>
+          </form>
+
+          <!-- Trolley Safety Tips for Students -->
+          <div class="student-tip-box">
+            <span class="tip-badge">💡 Tips Troli Anak Rantau</span>
+            <p>Ambil kebutuhan pokok & sabun mandi dulu sebelum lirik rak snack dan boba ya!</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCREEN 2: Main Application Screen -->
+      <section id="mainAppScreen" class="screen">
+        
+        <!-- Top App Bar: 3 Tabs on Left, Budget Tracker & Logout on Right -->
+        <header class="app-header">
+          <!-- Top Left Navigation Tabs: Store, List, History -->
+          <div class="header-left-tabs">
+            <button type="button" class="tab-chip active" id="chipStore" onclick="switchTab('store')">
+              <i data-lucide="store"></i>
+              <span>Store</span>
+            </button>
+            <button type="button" class="tab-chip" id="chipList" onclick="switchTab('list')">
+              <i data-lucide="shopping-bag"></i>
+              <span>List</span>
+              <span class="badge-count" id="headerCartCount">0</span>
+            </button>
+            <button type="button" class="tab-chip" id="chipHistory" onclick="switchTab('history')">
+              <i data-lucide="history"></i>
+              <span>History</span>
+            </button>
+          </div>
+
+          <!-- Top Right: Live Budget Display + Logout Button -->
+          <div class="header-right-action">
+            <div class="header-budget-box" title="Sisa Saldo Belanja">
+              <span class="budget-label">Sisa Budget</span>
+              <span class="budget-amount" id="headerBudgetRemaining">Rp 0</span>
+            </div>
+            <button type="button" class="btn-logout" id="btnLogout" onclick="confirmLogout()" title="Keluar / Reset Sesi">
+              <i data-lucide="log-out"></i>
+            </button>
+          </div>
+        </header>
+
+        <!-- Live Budget Safety Alert Banner (Slides down when low or over) -->
+        <div id="safetyBanner" class="safety-banner">
+          <div class="safety-content">
+            <span id="safetyIcon" class="safety-icon">⚠️</span>
+            <span id="safetyText" class="safety-text">Budget aman! Terus belanja hemat.</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="budgetProgressBar" class="progress-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- Store Context Ribbon (Current Supermarket & Active Discounts) -->
+        <div class="store-ribbon">
+          <div class="store-info-badge">
+            <i data-lucide="map-pin"></i>
+            <span id="currentSupermarketName">Supermarket</span>
+          </div>
+          <div class="cart-quick-summary">
+            <span>Terpakai: <strong id="ribbonSpentAmount">Rp 0</strong></span>
+          </div>
+        </div>
+
+        <!-- MAIN SCROLLABLE CONTENT AREA -->
+        <main class="content-scroll-area" id="contentArea">
+          
+          <!-- TAB 1: STORE (Katalog Belanja dengan Foto, Harga, Diskon, Emote) -->
+          <section id="tabContentStore" class="tab-view active-view">
+            <!-- Search & Category Filters -->
+            <div class="store-controls">
+              <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="productSearch" placeholder="Cari mie, telur, susu, deterjen..." oninput="handleSearch(this.value)">
+              </div>
+              <div class="category-scroll" id="categoryPills">
+                <button class="cat-pill active" onclick="filterCategory('all', this)">Semua</button>
+                <button class="cat-pill" onclick="filterCategory('sembako', this)">🍚 Sembako</button>
+                <button class="cat-pill" onclick="filterCategory('instan', this)">🍜 Mie & Instan</button>
+                <button class="cat-pill" onclick="filterCategory('minuman', this)">🥛 Susu & Minum</button>
+                <button class="cat-pill" onclick="filterCategory('toiletries', this)">🧼 Mandi & Cuci</button>
+                <button class="cat-pill" onclick="filterCategory('camilan', this)">🍿 Camilan Kos</button>
+              </div>
+            </div>
+
+            <!-- Price Trend Legend -->
+            <div class="trend-legend">
+              <span class="legend-title">Tren Harga vs Bulan Lalu:</span>
+              <span class="legend-item"><strong class="emote-up">⬆</strong> Naik</span>
+              <span class="legend-item"><strong class="emote-down">⬇︎</strong> Turun</span>
+              <span class="legend-item"><strong class="emote-equal">=</strong> Stabil</span>
+            </div>
+
+            <!-- Product Tiles Grid / Vertical Scroll -->
+            <div class="product-tiles-container" id="productTiles">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+          </section>
+
+          <!-- TAB 2: LIST (Keranjang Belanja Format Presisi) -->
+          <section id="tabContentList" class="tab-view">
+            <div class="list-view-header">
+              <div class="list-title-wrap">
+                <h2>Troli Belanja Kamu</h2>
+                <span id="listItemsCount" class="items-subtitle">0 barang di dalam troli</span>
+              </div>
+              <button class="btn-clear-cart" onclick="clearCartPrompt()" title="Kosongkan Troli">
+                <i data-lucide="trash-2"></i> Kosongkan
+              </button>
+            </div>
+
+            <!-- List Items Container formatted with X and borders -->
+            <div class="cart-items-container" id="cartItemsList">
+              <!-- Rendered dynamically matching user specification -->
+            </div>
+
+            <!-- Empty Cart Placeholder -->
+            <div id="emptyCartState" class="empty-state">
+              <div class="empty-icon">🛒</div>
+              <h3>Troli Masih Kosong Widihh!</h3>
+              <p>Yuk pilih barang belanjaan anak kos di tab <strong>Store</strong> sebelum budget bulanan ludes!</p>
+              <button class="btn-goto-store" onclick="switchTab('store')">
+                <i data-lucide="store"></i> Buka Katalog Store
+              </button>
+            </div>
+          </section>
+
+          <!-- TAB 3: HISTORY (Riwayat Belanjaan yang Sudah Di-Checkout) -->
+          <section id="tabContentHistory" class="tab-view">
+            <div class="history-view-header">
+              <h2>Riwayat Belanja Bulanan</h2>
+              <span class="history-subtitle">Catatan pengeluaran tersimpan rapi</span>
+            </div>
+
+            <!-- History Items Container -->
+            <div class="history-container" id="historyContainer">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <!-- Empty History State -->
+            <div id="emptyHistoryState" class="empty-state">
+              <div class="empty-icon">🧾</div>
+              <h3>Belum Ada Struk Riwayat</h3>
+              <p>Daftar belanja yang sudah kamu selesaikan lewat tombol <strong>Checkout</strong> akan tersimpan di sini.</p>
+            </div>
+          </section>
+
+        </main>
+
+        <!-- SPECIAL BOTTOM BAR FOR TAB 'LIST' (Total harga dengan font transisi coklat #622B14 -> Merah, border #F3E4C9, & Checkout) -->
+        <footer id="listBottomBar" class="list-bottom-bar">
+          <div class="total-info-col">
+            <span class="total-label">Total Belanjaan:</span>
+            <span id="cartTotalPrice" class="total-price-dynamic">Rp 0</span>
+            <span id="budgetRemainingNote" class="budget-note">Sisa budget: Rp 0</span>
+          </div>
+          <button type="button" id="btnCheckout" class="btn-checkout" onclick="handleCheckout()">
+            <span>Checkout</span>
+            <i data-lucide="check-circle-2"></i>
+          </button>
+        </footer>
+
+        <!-- FLOATING BOTTOM NAVIGATION BAR (Navigasi melayang dengan Lucide Icons) -->
+        <nav class="bottom-nav-bar">
+          <button type="button" class="nav-item active" id="navStore" onclick="switchTab('store')">
+            <div class="nav-icon-wrap">
+              <i data-lucide="store"></i>
+            </div>
+            <span class="nav-label">Belanja</span>
+          </button>
+
+          <button type="button" class="nav-item" id="navList" onclick="switchTab('list')">
+            <div class="nav-icon-wrap">
+              <i data-lucide="shopping-cart"></i>
+              <span class="nav-badge" id="bottomCartBadge">0</span>
+            </div>
+            <span class="nav-label">Keranjang</span>
+          </button>
+
+          <button type="button" class="nav-item" id="navHistory" onclick="switchTab('history')">
+            <div class="nav-icon-wrap">
+              <i data-lucide="history"></i>
+            </div>
+            <span class="nav-label">Riwayat</span>
+          </button>
+        </nav>
+
+      </section>
+
+      <!-- MODAL: Database Loading Simulator -->
+      <div id="loadingModal" class="modal-overlay">
+        <div class="loading-modal-card">
+          <div class="spinner-pulse"></div>
+          <h3 id="loadingTitle">Menghubungkan ke Supermarket...</h3>
+          <p id="loadingSubtitle">Mengambil katalog harga & promo diskon terbaru...</p>
+          <div class="loading-progress-bar">
+            <div class="loading-progress-fill" id="loadingProgressFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Confirmation Logout / Reset -->
+      <div id="logoutModal" class="modal-overlay">
+        <div class="custom-dialog-card">
+          <div class="dialog-icon-wrap warning">
+            <i data-lucide="alert-triangle"></i>
+          </div>
+          <h3>Reset Sesi Belanja?</h3>
+          <p>Jika kamu Log out, pilihan supermarket dan budget akan direset. Barang di troli saat ini akan dibatalkan.</p>
+          <div class="dialog-actions">
+            <button class="btn-dialog-cancel" onclick="closeModal('logoutModal')">Batal</button>
+            <button class="btn-dialog-confirm-danger" onclick="executeLogout()">Ya, Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Checkout Success Receipt -->
+      <div id="checkoutSuccessModal" class="modal-overlay">
+        <div class="custom-dialog-card receipt-card">
+          <div class="dialog-icon-wrap success">
+            <i data-lucide="check"></i>
+          </div>
+          <span class="receipt-pill">Widihh Sukses! 🎉</span>
+          <h3>Struk Belanja Terkunci</h3>
+          <p class="receipt-desc">Semua barang telah dikonfirmasi dan dimasukkan ke <strong>Riwayat Belanja</strong>. List sekarang terkunci.</p>
+          <div class="receipt-summary-box" id="receiptSummaryBox">
+            <!-- Populated on checkout -->
+          </div>
+          <div class="dialog-actions">
+            <button class="btn-dialog-primary" onclick="finishCheckoutFlow()">
+              Lihat Riwayat Belanja <i data-lucide="arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOAST NOTIFICATION CONTAINER (Quick feedback while pushing cart) -->
+      <div id="toastContainer" class="toast-container"></div>
+
+    </div>
+  </div>
+
+  <!-- App Script -->
+  <script src="app.js"></script>
+</body>
+</html>
+
