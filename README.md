@@ -102,6 +102,20 @@ Nama barang
 ```
 - Disimpan di `localStorage` peramban.
 
+### ☁️ 5. Arsitektur Multi-Device Realtime (Cloud Firestore `onSnapshot`)
+Aplikasi mendukung penggunaan bersamaan di **HP (di supermarket)** dan **PC (di rumah)** secara live tanpa perlu me-refresh halaman:
+- **Realtime Listener `onSnapshot()`**: Menggunakan listener streaming realtime Cloud Firestore (`onSnapshot()`) sehingga saat pengguna menambah atau mengubah jumlah barang dari HP di lorong supermarket, tampilan di monitor PC langsung ter-update detik itu juga.
+- **Mekanisme Fallback LocalStorage (Offline-First)**: Saat berada di lantai bawah tanah (*basement*) supermarket dengan sinyal lemah atau offline, data troli disimpan secara instan di LocalStorage. Menekan tombol **F5** atau me-reload halaman tidak akan menghilangkan belanjaan. Begitu sinyal internet pulih, perubahan otomatis tersinkronisasi ke Firestore.
+- **Variabel Database yang Disinkronkan**:
+  1. `storeLocation`: Wilayah dan nama supermarket yang dipilih (`region`, `supermarketId`, `supermarketName`).
+  2. `shoppingDate`: Waktu sesi belanja dimulai (ISO Timestamp).
+  3. `walletLimit`: Batas budget belanja awal yang terkunci.
+  4. `items`: Daftar objek barang di troli (`id`, `name`, `effectivePrice`, `originalPrice`, `discount`, `unit`, `quantity`).
+  5. `totalSpent`: Total pengeluaran aktual dari seluruh barang di troli.
+  6. `remainingBudget`: Sisa budget belanja aktif (`walletLimit - totalSpent`).
+  7. `status`: Status sesi (`'shopping'`, `'setup'`, atau `'checkout'`).
+  8. `lastUpdatedBy`: Identitas perangkat pengubah terakhir (`'HP (Troli)'` atau `'PC (Desktop)'`).
+
 ---
 
 ## 🚀 Cara Menjalankan & Memasang di HP (PWA)

@@ -32,10 +32,15 @@
       <header class="status-bar">
         <div class="status-left">
           <span class="status-time" id="statusTime">09:41</span>
-          <span class="status-badge-rantau">🎒 Anak Rantau Mode</span>
+          <span class="status-badge-device" id="deviceBadge">📱 HP</span>
+        </div>
+        <div class="status-center">
+          <div class="sync-status-pill" id="syncStatusPill" title="Multi-device Realtime Cloud Firestore Sync">
+            <span class="sync-dot live" id="syncDot"></span>
+            <span id="syncStatusText">Cloud Sync (HP ⇄ PC)</span>
+          </div>
         </div>
         <div class="status-right">
-          <span class="status-signal">●●●●</span>
           <span class="status-wifi">📶</span>
           <span class="status-battery">100% 🔋</span>
         </div>
@@ -182,6 +187,7 @@
           </div>
           <div class="cart-quick-summary">
             <span>Terpakai: <strong id="ribbonSpentAmount">Rp 0</strong></span>
+            <span class="cloud-sync-tag" id="cloudSyncTag" title="Tersinkronisasi Realtime dengan Cloud Firestore">☁️ Realtime</span>
           </div>
         </div>
 
@@ -362,6 +368,9 @@
 
     </div>
   </div>
+
+  <!-- Firebase Cloud Firestore Realtime Sync Module (Multi-device HP ⇄ PC) -->
+  <script type="module" src="firebase-sync.js"></script>
 
   <!-- App Script -->
   <script src="app.js"></script>

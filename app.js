@@ -230,8 +230,222 @@ const APP_STATE = {
   history: [],             // Array sesi belanja yang sudah di-checkout
   storeCatalog: [],        // Katalog toko aktif yang sudah di-fetch
   activeCategory: 'all',
-  searchQuery: ''
+  searchQuery: '',
+  sessionId: 'active_trolley_session',
+  shoppingDate: null,
+  isOnline: navigator.onLine,
+  lastUpdatedBy: ''
 };
+
+// =============================================================================
+// 2B. MULTI-DEVICE REALTIME SYNC & LOCALSTORAGE FALLBACK
+// =============================================================================
+
+function updateDeviceBadge() {
+  const badge = document.getElementById('deviceBadge');
+  if (badge) {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    badge.textContent = isMobile ? '📱 HP Troli' : '💻 PC Desktop';
+  }
+}
+
+function updateSyncStatusPill(isOnline, text) {
+  const pill = document.getElementById('syncStatusPill');
+  const dot = document.getElementById('syncDot');
+  const label = document.getElementById('syncStatusText');
+
+  if (pill && dot && label) {
+    if (isOnline) {
+      pill.classList.remove('offline');
+      dot.classList.remove('offline');
+      dot.classList.add('live');
+      label.textContent = text || 'Cloud Sync (HP ⇄ PC)';
+    } else {
+      pill.classList.add('offline');
+      dot.classList.add('offline');
+      dot.classList.remove('live');
+      label.textContent = text || 'Offline (LocalStorage)';
+    }
+  }
+}
+
+/**
+ * Menyimpan data sesi aktif ke LocalStorage (Fallback Offline).
+ * Menjamin saat F5 ditekan atau sinyal hilang di basement, troli tetap 100% aman.
+ */
+function saveActiveSessionToStorage() {
+  try {
+    const sessionPayload = {
+      storeLocation: {
+        region: APP_STATE.selectedRegion,
+        supermarket: APP_STATE.selectedSupermarket,
+        supermarketId: APP_STATE.selectedSupermarket ? APP_STATE.selectedSupermarket.id : '',
+        supermarketName: APP_STATE.selectedSupermarket ? APP_STATE.selectedSupermarket.name : ''
+      },
+      shoppingDate: APP_STATE.shoppingDate || new Date().toISOString(),
+      walletLimit: Number(APP_STATE.budget || 0),
+      items: APP_STATE.cart,
+      totalSpent: getCartTotal(),
+      remainingBudget: Math.max(0, (APP_STATE.budget || 0) - getCartTotal()),
+      status: APP_STATE.currentScreen === 'main' ? 'shopping' : 'setup',
+      savedAt: Date.now()
+    };
+    localStorage.setItem('widihh_grocery_active_session', JSON.stringify(sessionPayload));
+  } catch (e) {
+    console.warn('[LocalStorage] Gagal menyimpan sesi troli:', e);
+  }
+}
+
+/**
+ * Membaca data sesi aktif dari LocalStorage saat app pertama dibuka / reload F5.
+ */
+function loadActiveSessionFromStorage() {
+  try {
+    const stored = localStorage.getItem('widihh_grocery_active_session');
+    if (!stored) return false;
+    const data = JSON.parse(stored);
+    if (data && data.status === 'shopping' && data.storeLocation && data.storeLocation.supermarket) {
+      APP_STATE.selectedRegion = data.storeLocation.region || '';
+      APP_STATE.selectedSupermarket = data.storeLocation.supermarket;
+      APP_STATE.budget = Number(data.walletLimit || 0);
+      APP_STATE.cart = Array.isArray(data.items) ? data.items : [];
+      APP_STATE.shoppingDate = data.shoppingDate;
+      
+      loadStoreDatabase(APP_STATE.selectedSupermarket.id);
+      return true;
+    }
+  } catch (e) {
+    console.warn('[LocalStorage] Gagal membaca sesi troli lokal:', e);
+  }
+  return false;
+}
+
+function clearActiveSessionFromStorage() {
+  try {
+    localStorage.removeItem('widihh_grocery_active_session');
+  } catch (e) {}
+}
+
+/**
+ * Mendorong pembaruan ke Cloud Firestore (Realtime).
+ * Dipanggil setiap ada aksi: tambah barang, ubah qty, hapus, confirm setup, checkout.
+ */
+function syncSessionToFirestore() {
+  // Selalu amankan ke LocalStorage terlebih dahulu (Offline-First)
+  saveActiveSessionToStorage();
+
+  if (window.FirebaseSync && window.FirebaseSync.isInitialized()) {
+    const payload = {
+      storeLocation: {
+        region: APP_STATE.selectedRegion,
+        supermarket: APP_STATE.selectedSupermarket,
+        supermarketId: APP_STATE.selectedSupermarket ? APP_STATE.selectedSupermarket.id : '',
+        supermarketName: APP_STATE.selectedSupermarket ? APP_STATE.selectedSupermarket.name : ''
+      },
+      shoppingDate: APP_STATE.shoppingDate || new Date().toISOString(),
+      walletLimit: Number(APP_STATE.budget || 0),
+      items: APP_STATE.cart,
+      totalSpent: getCartTotal(),
+      remainingBudget: Math.max(0, (APP_STATE.budget || 0) - getCartTotal()),
+      status: APP_STATE.currentScreen === 'main' ? 'shopping' : 'setup'
+    };
+
+    window.FirebaseSync.updateSession(APP_STATE.sessionId, payload);
+  }
+}
+
+/**
+ * Inisialisasi Realtime Listener onSnapshot() dari Cloud Firestore.
+ * PENTING: Menggunakan onSnapshot() agar saat belanja di HP, layar PC
+ * di rumah langsung ter-update otomatis detik itu juga tanpa refresh.
+ */
+function initRealtimeSync() {
+  updateDeviceBadge();
+
+  if (!window.FirebaseSync || !window.FirebaseSync.isInitialized()) {
+    console.warn('[RealtimeSync] FirebaseSync belum siap, menunggu event...');
+    updateSyncStatusPill(false, 'Offline (LocalStorage)');
+    return;
+  }
+
+  updateSyncStatusPill(navigator.onLine, navigator.onLine ? 'Cloud Sync (HP ⇄ PC)' : 'Offline (LocalStorage)');
+
+  // Pasang onSnapshot listener untuk sesi aktif troli
+  window.FirebaseSync.subscribeToSession(
+    APP_STATE.sessionId,
+    (remoteData, metadata) => {
+      if (!remoteData) return;
+
+      const myDeviceId = window.FirebaseSync.getDeviceId();
+      const isFromOtherDevice = remoteData.lastUpdatedBy && remoteData.lastUpdatedBy !== myDeviceId;
+
+      // Jika update berasal dari perangkat lain (contoh: HP di supermarket ke PC di rumah)
+      if (isFromOtherDevice) {
+        console.log(`[Realtime Sync] Menerima update dari ${remoteData.lastUpdatedBy}:`, remoteData);
+        
+        if (remoteData.status === 'shopping') {
+          const hadSession = APP_STATE.currentScreen === 'main';
+          APP_STATE.selectedRegion = remoteData.storeLocation?.region || '';
+          APP_STATE.selectedSupermarket = remoteData.storeLocation?.supermarket || {
+            id: remoteData.storeLocation?.supermarketId || 'supermarket',
+            name: remoteData.storeLocation?.supermarketName || 'Supermarket'
+          };
+          APP_STATE.budget = Number(remoteData.walletLimit || 0);
+          APP_STATE.cart = Array.isArray(remoteData.items) ? remoteData.items : [];
+          APP_STATE.shoppingDate = remoteData.shoppingDate;
+
+          loadStoreDatabase(APP_STATE.selectedSupermarket.id);
+
+          if (!hadSession) {
+            enterMainAppScreen(true);
+          } else {
+            renderCartList();
+            updateCartAndBudgetDisplays();
+            renderStoreCatalog();
+          }
+
+          // Simpan snapshot terbaru ke LocalStorage sebagai backup
+          saveActiveSessionToStorage();
+
+          feedback.tap();
+          showToast(`🔄 Ter-update dari ${remoteData.lastUpdatedBy}! Sisa: ${formatRupiah(remoteData.remainingBudget)}`, 'info');
+        } else if (remoteData.status === 'setup' && APP_STATE.currentScreen === 'main') {
+          // Perangkat lain melakukan logout/reset
+          clearActiveSessionFromStorage();
+          APP_STATE.cart = [];
+          APP_STATE.budget = 0;
+          APP_STATE.selectedSupermarket = null;
+          APP_STATE.selectedRegion = '';
+          document.getElementById('mainAppScreen').classList.remove('active-screen');
+          document.getElementById('setupScreen').classList.add('active-screen');
+          APP_STATE.currentScreen = 'setup';
+          showToast(`Sesi direset oleh ${remoteData.lastUpdatedBy}.`, 'warning');
+        } else if (remoteData.status === 'checkout' && APP_STATE.currentScreen === 'main') {
+          clearActiveSessionFromStorage();
+          APP_STATE.cart = [];
+          updateCartAndBudgetDisplays();
+          showToast(`🛒 Belanjaan telah di-checkout dari ${remoteData.lastUpdatedBy}!`, 'success');
+          switchTab('history');
+        }
+      }
+    },
+    (err) => {
+      console.warn('[Realtime Sync Error]', err);
+      updateSyncStatusPill(false, 'Offline (LocalStorage)');
+    }
+  );
+
+  // Pasang onSnapshot listener untuk riwayat belanja
+  window.FirebaseSync.subscribeToHistory((remoteHistory) => {
+    if (Array.isArray(remoteHistory) && remoteHistory.length > 0) {
+      APP_STATE.history = remoteHistory;
+      saveHistoryToStorage();
+      if (APP_STATE.currentTab === 'history') {
+        renderHistoryView();
+      }
+    }
+  });
+}
 
 // =============================================================================
 // 3. AUDIO & HAPTIC SYNTHESIZER (Tanpa File Eksternal)
@@ -447,9 +661,11 @@ function handleConfirmSetup() {
   setTimeout(() => {
     // Generate supermarket-specific catalog with custom pricing modifier
     loadStoreDatabase(APP_STATE.selectedSupermarket.id);
+    APP_STATE.shoppingDate = new Date().toISOString();
 
     loadingModal.classList.remove('active');
     enterMainAppScreen();
+    syncSessionToFirestore();
   }, 950);
 }
 
@@ -481,21 +697,25 @@ function loadStoreDatabase(supermarketId) {
   });
 }
 
-function enterMainAppScreen() {
+function enterMainAppScreen(silent = false) {
   document.getElementById('setupScreen').classList.remove('active-screen');
   document.getElementById('mainAppScreen').classList.add('active-screen');
   APP_STATE.currentScreen = 'main';
 
   // Update header info
-  document.getElementById('currentSupermarketName').textContent = APP_STATE.selectedSupermarket.name;
+  if (APP_STATE.selectedSupermarket) {
+    document.getElementById('currentSupermarketName').textContent = APP_STATE.selectedSupermarket.name;
+  }
   
   // Render views
   renderStoreCatalog();
   updateCartAndBudgetDisplays();
   switchTab('store');
 
-  showToast(`Selamat belanja di ${APP_STATE.selectedSupermarket.name}! Budget terkunci.`, 'success');
-  feedback.itemAdded();
+  if (!silent && APP_STATE.selectedSupermarket) {
+    showToast(`Selamat belanja di ${APP_STATE.selectedSupermarket.name}! Budget terkunci.`, 'success');
+    feedback.itemAdded();
+  }
 }
 
 // =============================================================================
@@ -696,6 +916,9 @@ function addItemToCart(itemId) {
   updateCartAndBudgetDisplays();
   feedback.itemAdded();
   showToast(`+1 ${item.name} masuk ke List`, 'success');
+
+  // Multi-device Realtime Sync ke Firestore & LocalStorage fallback
+  syncSessionToFirestore();
 }
 
 // =============================================================================
@@ -809,6 +1032,7 @@ function changeItemQty(index, delta) {
   }
 
   renderCartList();
+  syncSessionToFirestore();
 }
 
 /**
@@ -838,6 +1062,7 @@ function handleManualQtyChange(index, newQtyStr) {
   item.quantity = parsed;
   feedback.tap();
   renderCartList();
+  syncSessionToFirestore();
 }
 
 /**
@@ -851,6 +1076,7 @@ function removeItemFromCart(index) {
   feedback.tap();
   showToast(`Uang ${formatRupiah(item.effectivePrice * item.quantity)} kembali ke sisa budget.`, 'warning');
   renderCartList();
+  syncSessionToFirestore();
 }
 
 function clearCartPrompt() {
@@ -859,6 +1085,7 @@ function clearCartPrompt() {
     APP_STATE.cart = [];
     renderCartList();
     showToast('Troli dikosongkan.', 'warning');
+    syncSessionToFirestore();
   }
 }
 
@@ -990,6 +1217,18 @@ function handleCheckout() {
   // Push to history & persist in localStorage
   APP_STATE.history.unshift(receiptSession);
   saveHistoryToStorage();
+  clearActiveSessionFromStorage();
+
+  // Simpan struk ke Cloud Firestore & reset sesi aktif
+  if (window.FirebaseSync && window.FirebaseSync.isInitialized()) {
+    window.FirebaseSync.saveCheckoutReceipt(receiptSession);
+    window.FirebaseSync.updateSession(APP_STATE.sessionId, {
+      status: 'checkout',
+      items: [],
+      totalSpent: 0,
+      remainingBudget: 0
+    });
+  }
 
   // Render receipt popup summary
   const summaryBox = document.getElementById('receiptSummaryBox');
@@ -1149,6 +1388,11 @@ function executeLogout() {
   closeModal('logoutModal');
   feedback.tap();
 
+  clearActiveSessionFromStorage();
+  if (window.FirebaseSync && window.FirebaseSync.isInitialized()) {
+    window.FirebaseSync.resetSession(APP_STATE.sessionId);
+  }
+
   // Reset shopping cart and selection
   APP_STATE.cart = [];
   APP_STATE.budget = 0;
@@ -1215,8 +1459,36 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 30000);
 
+  // 1. Fallback Offline: Muat data troli lokal terlebih dahulu (F5 / sinyal lemah)
+  const hasLocalActiveSession = loadActiveSessionFromStorage();
+  if (hasLocalActiveSession) {
+    console.log('[LocalStorage Fallback] Memulihkan sesi belanja dari penyimpanan lokal.');
+    enterMainAppScreen(true);
+  }
+
   // Load history from persistence
   loadHistoryFromStorage();
+
+  // 2. Setup Network Online / Offline Detection
+  window.addEventListener('online', () => {
+    updateSyncStatusPill(true, 'Cloud Sync (HP ⇄ PC)');
+    syncSessionToFirestore();
+    showToast('🌐 Terhubung kembali ke Cloud Firestore! Sinkronisasi aktif.', 'success');
+  });
+
+  window.addEventListener('offline', () => {
+    updateSyncStatusPill(false, 'Offline (LocalStorage)');
+    showToast('📶 Sinyal lemah di supermarket: Troli tetap aman di HP!', 'warning');
+  });
+
+  // 3. Inisialisasi Realtime Sync via onSnapshot()
+  if (window.FirebaseSync && window.FirebaseSync.isInitialized()) {
+    initRealtimeSync();
+  } else {
+    window.addEventListener('firebaseSyncReady', () => {
+      initRealtimeSync();
+    });
+  }
 
   // Register Service Worker for PWA
   if ('serviceWorker' in navigator) {
