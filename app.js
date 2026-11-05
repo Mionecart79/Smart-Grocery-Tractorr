@@ -222,12 +222,13 @@ const BASE_CATALOG = [
 
 const APP_STATE = {
   currentScreen: 'setup', // 'setup' | 'main'
-  currentTab: 'store',     // 'store' | 'list' | 'history'
+  currentTab: 'store',     // 'store' | 'plan' | 'list' | 'history'
   selectedRegion: '',
   selectedSupermarket: null,
   budget: 0,               // Nominal budget awal (terkunci saat shopping)
   cart: [],                // Array item yang sedang di trolley
   history: [],             // Array sesi belanja yang sudah di-checkout
+  plans: [],               // Array checklist rencana belanja
   storeCatalog: [],        // Katalog toko aktif yang sudah di-fetch
   activeCategory: 'all',
   searchQuery: '',
@@ -844,25 +845,27 @@ function switchTab(tabName) {
   feedback.tap();
 
   // Update Top Tab Chips
-  ['chipStore', 'chipList', 'chipHistory'].forEach(id => {
+  ['chipStore', 'chipPlan', 'chipList', 'chipHistory'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('active');
   });
   if (tabName === 'store') document.getElementById('chipStore')?.classList.add('active');
+  if (tabName === 'plan') document.getElementById('chipPlan')?.classList.add('active');
   if (tabName === 'list') document.getElementById('chipList')?.classList.add('active');
   if (tabName === 'history') document.getElementById('chipHistory')?.classList.add('active');
 
-  // Update Bottom Nav Items
-  ['navStore', 'navList', 'navHistory'].forEach(id => {
+  // Update Bottom Nav Items (Belanja, Rencana, Keranjang, Riwayat)
+  ['navStore', 'navPlan', 'navList', 'navHistory'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('active');
   });
   if (tabName === 'store') document.getElementById('navStore')?.classList.add('active');
+  if (tabName === 'plan') document.getElementById('navPlan')?.classList.add('active');
   if (tabName === 'list') document.getElementById('navList')?.classList.add('active');
   if (tabName === 'history') document.getElementById('navHistory')?.classList.add('active');
 
   // Switch Tab View Content
-  ['tabContentStore', 'tabContentList', 'tabContentHistory'].forEach(id => {
+  ['tabContentStore', 'tabContentPlan', 'tabContentList', 'tabContentHistory'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('active-view');
   });
@@ -872,6 +875,11 @@ function switchTab(tabName) {
 
   if (tabName === 'store') {
     document.getElementById('tabContentStore')?.classList.add('active-view');
+    listBottomBar?.classList.remove('visible');
+    contentArea?.classList.remove('with-list-bar');
+  } else if (tabName === 'plan') {
+    document.getElementById('tabContentPlan')?.classList.add('active-view');
+    renderPlanView();
     listBottomBar?.classList.remove('visible');
     contentArea?.classList.remove('with-list-bar');
   } else if (tabName === 'list') {
@@ -889,6 +897,247 @@ function switchTab(tabName) {
   // Refresh lucide icons on render
   if (window.lucide) {
     lucide.createIcons();
+  }
+}
+
+// =============================================================================
+// 6B. TAB: RENCANA (Checklist Rencana Belanja Anti-Impulsif)
+// =============================================================================
+
+/**
+ * Render Tampilan Checklist Rencana Belanja
+ */
+function renderPlanView() {
+  const container = document.getElementById('planItemsList');
+  const emptyState = document.getElementById('emptyPlanState');
+  const moveWrap = document.getElementById('planMoveActionWrap');
+  const counterEl = document.getElementById('planItemsCounter');
+  const bottomBadge = document.getElementById('bottomPlanBadge');
+  const headerBadge = document.getElementById('headerPlanCount');
+  const checkedCountEl = document.getElementById('planCheckedCount');
+  const toggleBtn = document.getElementById('btnToggleAllPlan');
+
+  if (!container) return;
+
+  const totalPlans = APP_STATE.plans.length;
+  const checkedCount = APP_STATE.plans.filter(p => p.checked).length;
+
+  // Update counters & badges
+  if (counterEl) counterEl.textContent = `${totalPlans} barang`;
+  if (checkedCountEl) checkedCountEl.textContent = checkedCount;
+
+  if (bottomBadge) {
+    bottomBadge.textContent = totalPlans;
+    bottomBadge.style.display = totalPlans > 0 ? 'inline-block' : 'none';
+  }
+  if (headerBadge) {
+    headerBadge.textContent = totalPlans;
+    headerBadge.style.display = totalPlans > 0 ? 'inline-block' : 'none';
+  }
+
+  // Update toggle all button text
+  if (toggleBtn) {
+    toggleBtn.textContent = (checkedCount === totalPlans && totalPlans > 0) ? 'Batal Pilih' : 'Pilih Semua';
+  }
+
+  // Jika rencana kosong
+  if (totalPlans === 0) {
+    container.innerHTML = '';
+    if (emptyState) emptyState.style.display = 'flex';
+    if (moveWrap) moveWrap.classList.remove('visible');
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = 'none';
+  if (moveWrap) moveWrap.classList.add('visible');
+
+  // Render checklist cards
+  container.innerHTML = APP_STATE.plans.map(item => {
+    return `
+      <div class="plan-checklist-card ${item.checked ? 'checked' : ''}" onclick="togglePlanItemCheck('${item.id}', event)">
+        <div class="plan-card-left">
+          <div class="plan-checkbox-custom">
+            ${item.checked ? '✓' : ''}
+          </div>
+          <div class="plan-item-info">
+            <span class="plan-item-name">${item.name}</span>
+            <span class="plan-item-cat">${item.category}</span>
+          </div>
+        </div>
+        <div class="plan-card-right">
+          <span class="plan-item-price-tag">${formatRupiah(item.estimatedPrice)}</span>
+          <button type="button" class="btn-delete-plan-item" onclick="deletePlanItem('${item.id}', event)" title="Hapus dari rencana">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+/**
+ * Tambah Item Baru ke Rencana Belanja
+ */
+function handleAddPlanItem() {
+  const nameInput = document.getElementById('planItemName');
+  const catSelect = document.getElementById('planItemCategory');
+  const priceInput = document.getElementById('planItemPrice');
+
+  const name = nameInput?.value.trim();
+  if (!name) {
+    showToast('Input nama makanan / barang terlebih dahulu!', 'warning');
+    nameInput?.focus();
+    return;
+  }
+
+  const category = catSelect?.value || 'Bahan Pokok';
+  const estimatedPrice = parseRupiahInput(priceInput?.value || '');
+
+  const newPlanItem = {
+    id: 'plan-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+    name: name,
+    category: category,
+    estimatedPrice: estimatedPrice,
+    checked: true // Otomatis tercentang agar siap dipindahkan jika diinginkan
+  };
+
+  APP_STATE.plans.unshift(newPlanItem);
+  savePlansToStorage();
+
+  // Reset inputs
+  if (nameInput) nameInput.value = '';
+  if (priceInput) priceInput.value = '';
+  nameInput?.focus();
+
+  feedback.tap();
+  renderPlanView();
+  showToast(`✨ "${name}" ditambahkan ke checklist rencana!`, 'success');
+}
+
+/**
+ * Toggle Centang Checklist Item Rencana
+ */
+function togglePlanItemCheck(id, event) {
+  if (event && event.target.closest('.btn-delete-plan-item')) return;
+
+  const item = APP_STATE.plans.find(p => p.id === id);
+  if (!item) return;
+
+  item.checked = !item.checked;
+  savePlansToStorage();
+  feedback.tap();
+  renderPlanView();
+}
+
+/**
+ * Pilih Semua / Batal Pilih Checklist Rencana
+ */
+function toggleSelectAllPlanItems() {
+  const total = APP_STATE.plans.length;
+  if (total === 0) return;
+
+  const allChecked = APP_STATE.plans.every(p => p.checked);
+  APP_STATE.plans.forEach(p => {
+    p.checked = !allChecked;
+  });
+
+  savePlansToStorage();
+  feedback.tap();
+  renderPlanView();
+}
+
+/**
+ * Hapus Item dari Rencana
+ */
+function deletePlanItem(id, event) {
+  if (event) event.stopPropagation();
+
+  const idx = APP_STATE.plans.findIndex(p => p.id === id);
+  if (idx === -1) return;
+
+  const deleted = APP_STATE.plans.splice(idx, 1)[0];
+  savePlansToStorage();
+  feedback.tap();
+  renderPlanView();
+  showToast(`Barang "${deleted.name}" dihapus dari rencana.`, 'warning');
+}
+
+/**
+ * Pindahkan Barang yang Dicentang ke Troli Belanja Langsung
+ * Sistem memindahkan barang yang dicentang ke troli, dan halaman rencana kembali kosong!
+ */
+function moveCheckedPlansToCart() {
+  const checkedItems = APP_STATE.plans.filter(p => p.checked);
+
+  if (checkedItems.length === 0) {
+    showToast('Centang minimal 1 barang rencana yang ingin dipindahkan ke troli!', 'warning');
+    return;
+  }
+
+  // Hitung total estimasi harga barang yang dipindahkan
+  const addedTotal = checkedItems.reduce((sum, item) => sum + (item.estimatedPrice || 0), 0);
+  const currentTotal = getCartTotal();
+
+  if (APP_STATE.budget > 0 && (currentTotal + addedTotal > APP_STATE.budget)) {
+    const remaining = Math.max(0, APP_STATE.budget - currentTotal);
+    if (!confirm(`⚠️ Total estimasi (${formatRupiah(addedTotal)}) melebihi sisa budget (${formatRupiah(remaining)}). Tetap pindahkan ke troli?`)) {
+      return;
+    }
+  }
+
+  // Pindahkan barang-barang yang dicentang ke Troli (APP_STATE.cart)
+  checkedItems.forEach(item => {
+    const cartItem = {
+      id: 'cart-plan-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      name: item.name,
+      category: item.category,
+      unit: 'pcs',
+      quantity: 1,
+      originalPrice: item.estimatedPrice || 0,
+      effectivePrice: item.estimatedPrice || 0,
+      discount: 0,
+      trend: 'equal',
+      isFromPlan: true
+    };
+    APP_STATE.cart.push(cartItem);
+  });
+
+  // Hapus barang yang telah dipindahkan dari rencana (halaman rencana kembali kosong)
+  APP_STATE.plans = APP_STATE.plans.filter(p => !p.checked);
+  savePlansToStorage();
+
+  // Sinkronisasi Sesi Aktif & Cloud Firestore
+  saveActiveSessionToStorage();
+  syncSessionToFirestore();
+
+  // Render ulang UI
+  renderPlanView();
+  renderCartList();
+  updateCartAndBudgetDisplays();
+
+  feedback.checkoutSuccess();
+  showToast(`🛒 ${checkedItems.length} barang rencana berhasil dipindahkan ke troli!`, 'success');
+}
+
+function savePlansToStorage() {
+  try {
+    localStorage.setItem('widihh_grocery_plans', JSON.stringify(APP_STATE.plans));
+  } catch (e) {
+    console.warn('[LocalStorage] Gagal menyimpan rencana belanja:', e);
+  }
+}
+
+function loadPlansFromStorage() {
+  try {
+    const stored = localStorage.getItem('widihh_grocery_plans');
+    if (stored) {
+      APP_STATE.plans = JSON.parse(stored);
+      if (!Array.isArray(APP_STATE.plans)) APP_STATE.plans = [];
+    }
+  } catch (e) {
+    console.warn('[LocalStorage] Gagal membaca rencana belanja:', e);
   }
 }
 
@@ -1922,8 +2171,10 @@ document.addEventListener('DOMContentLoaded', () => {
     enterMainAppScreen(true);
   }
 
-  // Load history from persistence
+  // Load history & plans from persistence
   loadHistoryFromStorage();
+  loadPlansFromStorage();
+  renderPlanView();
 
   // 2. Setup Network Online / Offline Detection
   window.addEventListener('online', () => {

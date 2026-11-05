@@ -154,11 +154,16 @@
         
         <!-- Top App Bar: 3 Tabs on Left, Budget Tracker & Logout on Right -->
         <header class="app-header">
-          <!-- Top Left Navigation Tabs: Store, List, History -->
+          <!-- Top Left Navigation Tabs: Store, Rencana, List, History -->
           <div class="header-left-tabs">
             <button type="button" class="tab-chip active" id="chipStore" onclick="switchTab('store')">
               <i data-lucide="store"></i>
               <span>Store</span>
+            </button>
+            <button type="button" class="tab-chip" id="chipPlan" onclick="switchTab('plan')">
+              <i data-lucide="clipboard-list"></i>
+              <span>Rencana</span>
+              <span class="badge-count" id="headerPlanCount" style="display: none;">0</span>
             </button>
             <button type="button" class="tab-chip" id="chipList" onclick="switchTab('list')">
               <i data-lucide="shopping-bag"></i>
@@ -274,6 +279,109 @@
             </div>
           </section>
 
+          <!-- TAB: RENCANA (Catat Kebutuhan Sebelum ke Supermarket Agar Tidak Impulsif) -->
+          <section id="tabContentPlan" class="tab-view">
+            <!-- Header Kartu Rencana Belanja -->
+            <div class="plan-header-card">
+              <div class="plan-header-text">
+                <h2 class="plan-main-title">Rencana Belanja</h2>
+                <p class="plan-subtitle">Catat kebutuhan sebelum ke supermareket agar tidak impulsif</p>
+              </div>
+
+              <!-- Form Input Rencana -->
+              <form id="planInputForm" class="plan-form-card" onsubmit="event.preventDefault(); handleAddPlanItem();">
+                <!-- 1. Input Nama Makanan / Barang -->
+                <div class="plan-field-group">
+                  <label for="planItemName" class="plan-field-label">Input Nama Makanan</label>
+                  <input 
+                    type="text" 
+                    id="planItemName" 
+                    class="plan-text-input" 
+                    placeholder="Contoh: Beras Ramos, Telur 1kg, Susu UHT, Sabun Mandi..." 
+                    required 
+                    autocomplete="off"
+                  >
+                </div>
+
+                <!-- 2. Baris Selector Barang & Estimasi Harga Berjajar -->
+                <div class="plan-grid-2col">
+                  <!-- Selector Kategori (pokok/kebersihan/susu/dll) -->
+                  <div class="plan-field-group">
+                    <label for="planItemCategory" class="plan-field-label">Kategori Barang</label>
+                    <div class="plan-select-wrapper">
+                      <select id="planItemCategory" class="plan-select" required>
+                        <option value="Bahan Pokok" selected>🍚 Bahan Pokok</option>
+                        <option value="Kebersihan">🧼 Kebersihan</option>
+                        <option value="Susu">🥛 Susu</option>
+                        <option value="Makanan & Minuman">🍜 Makanan & Minum</option>
+                        <option value="Dapur & Bumbu">🧂 Bumbu Dapur</option>
+                        <option value="Camilan">🍿 Camilan</option>
+                        <option value="Lainnya">📦 Lainnya</option>
+                      </select>
+                      <i data-lucide="chevron-down" class="plan-select-arrow"></i>
+                    </div>
+                  </div>
+
+                  <!-- Input Estimasi Harga Barang -->
+                  <div class="plan-field-group">
+                    <label for="planItemPrice" class="plan-field-label">Estimasi Harga (Rp)</label>
+                    <div class="plan-price-wrapper">
+                      <span class="plan-price-prefix">Rp</span>
+                      <input 
+                        type="text" 
+                        id="planItemPrice" 
+                        class="plan-price-input" 
+                        placeholder="0" 
+                        inputmode="numeric" 
+                        oninput="handleNumericPriceInput(this)"
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3. Tombol Tambah ke Rencana -->
+                <button type="submit" id="btnAddPlanItem" class="btn-add-plan">
+                  <i data-lucide="plus-circle"></i>
+                  <span>Tambah ke Rencana</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Bagian Checklist Produk Rencana -->
+            <div class="plan-checklist-section">
+              <div class="plan-checklist-header">
+                <div class="checklist-title-wrap">
+                  <h3>Checklist Rencana Belanja</h3>
+                  <span id="planItemsCounter" class="plan-counter-pill">0 barang</span>
+                </div>
+                <button type="button" class="btn-select-all-plan" onclick="toggleSelectAllPlanItems()" id="btnToggleAllPlan">
+                  Pilih Semua
+                </button>
+              </div>
+
+              <!-- Daftar Barang Muncul Sebagai Checklist -->
+              <div class="plan-items-list" id="planItemsList">
+                <!-- Rendered dynamically by app.js -->
+              </div>
+
+              <!-- Tombol Pindahkan yang Dicentang ke Troli -->
+              <div class="plan-move-action-wrap" id="planMoveActionWrap">
+                <button type="button" class="btn-move-to-cart" id="btnMoveToCart" onclick="moveCheckedPlansToCart()">
+                  <i data-lucide="shopping-cart"></i>
+                  <span>Pindahkan yang Dicentang ke Troli</span>
+                  <span class="plan-badge-count" id="planCheckedCount">0</span>
+                </button>
+              </div>
+
+              <!-- Empty State Rencana Belanja -->
+              <div id="emptyPlanState" class="empty-state">
+                <div class="empty-icon">📝</div>
+                <h3>Rencana Masih Kosong</h3>
+                <p>Catat kebutuhan belanja anak kos di atas agar belanja di supermarket lebih tertib dan hemat!</p>
+              </div>
+            </div>
+          </section>
+
           <!-- TAB 2: LIST (Keranjang Belanja Format Presisi) -->
           <section id="tabContentList" class="tab-view">
             <div class="list-view-header">
@@ -349,6 +457,15 @@
               <i data-lucide="store"></i>
             </div>
             <span class="nav-label">Belanja</span>
+          </button>
+
+          <!-- Navigasi Rencana di samping navigasi troli (Keranjang) -->
+          <button type="button" class="nav-item" id="navPlan" onclick="switchTab('plan')">
+            <div class="nav-icon-wrap">
+              <i data-lucide="clipboard-list"></i>
+              <span class="nav-badge" id="bottomPlanBadge" style="display: none;">0</span>
+            </div>
+            <span class="nav-label">Rencana</span>
           </button>
 
           <button type="button" class="nav-item" id="navList" onclick="switchTab('list')">
