@@ -8,35 +8,62 @@
 
 <p align="center">
   <a href="https://mionecart79.github.io/Smart-Grocery-Tractorr/">
-    <img src="https://img.shields.io/badge/🌐_Buka_Web_Live-GitHub_Pages-2ea44f?style=for-the-badge" alt="Live Demo" />
+    <img src="https://img.shields.io/badge/🌐_Buka_Web_Live-GitHub_Pages-2ea44f?style=for-the-badge&logo=github" alt="Live Demo" />
   </a>
   <a href="https://github.com/Mionecart79/Smart-Grocery-Tractorr/actions/workflows/deploy.yml">
     <img src="https://github.com/Mionecart79/Smart-Grocery-Tractorr/actions/workflows/deploy.yml/badge.svg" alt="PWA CI/CD" />
   </a>
-  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMionecart79%2FSmart-Grocery-Tractorr">
-    <img src="https://vercel.com/button" alt="Deploy with Vercel" />
-  </a>
 </p>
 
 ---
 
-## 🌐 Link Web Live Resmi:
-👉 **[https://mionecart79.github.io/Smart-Grocery-Tractorr/](https://mionecart79.github.io/Smart-Grocery-Tractorr/)**
+## 🌐 Tautan Web Live Publik (Pengujian Guru / Penguji):
 
-### 📱 Scan Barcode dengan Kamera HP:
-<p align="left">
-  <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://mionecart79.github.io/Smart-Grocery-Tractorr/" alt="QR Code Belanja" width="180" height="180" />
+> ### 👉 **[https://mionecart79.github.io/Smart-Grocery-Tractorr/](https://mionecart79.github.io/Smart-Grocery-Tractorr/)**
+>
+> 💡 *Website aktif 24/7. Dapat langsung diuji melalui smartphone (tampilan native mobile UI) maupun browser laptop/PC.*
+
+### 📱 Scan Barcode Langsung dari Layar HP:
+<p align="center">
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://mionecart79.github.io/Smart-Grocery-Tractorr/" alt="QR Code Belanja" width="200" height="200" />
 </p>
 
 ---
 
-## ✨ Fitur Utama & Kesesuaian Spesifikasi
+## ✨ Fitur Utama & Kesesuaian Rubrik
 
 ### 📱 1. Standar Arsitektur & Ergonomi Mobile
-- **Format Layar**: Didesain khusus tampilan smartphone (Mobile UI) dengan lebar maksimal **430px** (rasio 9:16 / centered di browser desktop dengan frame elegan).
-- **Navigasi Melayang (Floating Bottom Navigation Bar)**: Menu navigasi di bagian bawah dengan ikon Lucide untuk tab menu utama (**Belanja/Store**, **Keranjang/List**, **Riwayat/History**).
-- **Ergonomi Ramah Jempol (Thumb-Friendly)**: Area sentuh minimal 48px, input angka besar, kontrol stepper `- [qty] +` yang mudah dijangkau satu tangan sambil memegang troli.
-- **Dukungan PWA Penuh**: Dilengkapi `manifest.json`, Service Worker `sw.js` (offline caching untuk lantai basement supermarket), meta tag viewport cover, Apple touch icon, dan status bar theme color.
+- **Format Layar**: Didesain khusus smartphone (Mobile UI) dengan lebar maksimal **430px** (rasio 9:16 / centered di browser desktop).
+- **Floating Bottom Navigation Bar (4 Menu)**:
+  - **Belanja (`Store`)**: Katalog supermarket dengan harga promo dan diskon.
+  - **Rencana (`Plan`)**: Checklist kebutuhan belanja sebelum ke supermarket agar tidak impulsif.
+  - **Keranjang (`List`)**: Troli belanja aktif dengan kontrol kuantitas dan kalkulasi subtotal.
+  - **Riwayat (`History`)**: Catatan transaksi belanja tersimpan beserta struk resi.
+- **Dukungan PWA**: Standalone Add to Home Screen, cache offline `sw.js`, dan manifest lengkap.
+
+### 📝 2. Fitur Rencana Belanja (Anti-Impulsif)
+- **Input Kebutuhan**: Nama makanan/barang, kategori (`Pokok`, `Kebersihan`, `Susu`, `Makanan & Minum`, `Bumbu Dapur`, `Camilan`, `Lainnya`), dan estimasi harga.
+- **Checklist Interaktif**: Muncul sebagai checklist yang dapat dicentang atau dipilih massal (*Pilih Semua*).
+- **Pindahkan ke Troli Sekali Klik**: Tombol *Pindahkan yang Dicentang ke Troli* memindahkan barang langsung ke troli belanja aktif dan halaman rencana otomatis kembali bersih/kosong.
+
+### 🔝 3. Informasi Sesi Belanja di Bagian Atas
+- **Selector Lokasi Toko**: Dropdown interaktif untuk memilih atau berpindah supermarket (Lotte Mart Grocery - Puri Indah, Grand Lucky - Mall SMS, AEON Mall, Kantin Mb2).
+- **Date Picker**: Memilih tanggal transaksi sesi belanja secara fleksibel.
+
+### ➕ 4. Form Input Produk Belanja ("Tambah Produk")
+- **Input Fleksibel**: Nama produk, kategori, kemasan satuan (*karung/kg, pcs, kg, liter, pack, pouch, botol, kaleng, sachet, dus*).
+- **Kuantitas & Harga**: Stepper `- [] +`, harga saat ini & pembanding harga bulan lalu.
+- **Indikator Selisih Harga (Teks Merah)**: Perhitungan otomatis selisih harga (Rp) dan persentase kenaikan/penurunan harga dibanding bulan lalu.
+- **Potongan Diskon Toko**: Input manual persentase atau tombol cepat (0%, 5%, 10%, 20%, 50%), menampilkan harga setelah diskon, total hemat, serta hemat per item jika kuantitas > 1.
+- **Subtotal Real-time**: Kalkulasi otomatis tanpa perlu me-reload halaman.
+
+### 🧾 5. Riwayat Belanja & Cetak Resi
+- **Penyimpanan Multi-Toko**: Menyimpan lokasi toko, tanggal belanja, total pengeluaran, dan rincian produk ke LocalStorage dan Cloud Firestore.
+- **Cetak Resi Belanja**: Format struk kasir (*thermal receipt*) yang siap dicetak langsung via tombol *Cetak Resi Belanja* (`window.print()`).
+
+### ☁️ 6. Arsitektur Multi-Device Realtime (Cloud Firestore `onSnapshot`)
+- **Realtime Listener**: Sinkronisasi instan antar HP di supermarket dan monitor PC di rumah tanpa refresh.
+- **Offline Fallback**: Data keranjang tetap aman saat sinyal hilang di lantai bawah tanah (*basement*) supermarket.
 
 ### 🎨 2. Palet Warna & Transisi Dinamis
 - **Warna Estetik**: Dominasi **hijau muda** (`#A7E9AF` / `#8EE4AF`) dan **kuning terang** (`#FFE66D` / `#FFF3B0`).
