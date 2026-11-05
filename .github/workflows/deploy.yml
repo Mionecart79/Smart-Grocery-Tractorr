@@ -1,4 +1,4 @@
-name: Pages and Build Deployment
+name: pages build and deployment
 
 on:
   push:
@@ -112,9 +112,7 @@ jobs:
 
       - name: Confirm Deployment Done & Output Link
         run: |
-          REPO_OWNER="${{ github.repository_owner }}"
-          REPO_NAME="${{ github.event.repository.name }}"
-          PAGES_URL="https://${REPO_OWNER,,}.github.io/${REPO_NAME}/"
+          PAGES_URL="https://mionecart79.github.io/Smart-Grocery-Tractorr/"
 
           echo "=========================================================="
           echo "🎉 DEPLOY STATUS: DONE!"
@@ -122,6 +120,19 @@ jobs:
           echo "=========================================================="
           
           echo "::notice title=🚀 Deploy Status: DONE::Website aktif: ${PAGES_URL}"
+
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## 🚀 Deploy Status: DONE!
+          ### 🌐 Link Web Live Terbaru:
+          👉 **[${PAGES_URL}](${PAGES_URL})**
+
+          Fitur-fitur terbaru yang telah aktif:
+          - ✅ Menu Navigasi **Rencana Belanja** (Checklist & Pindahkan ke Troli)
+          - ✅ Selector Lokasi Toko & Date Picker Sesi Belanja di Ribbon Atas
+          - ✅ Form Input Produk dengan **Indikator Selisih Harga Teks Merah** & Diskon Toko
+          - ✅ Cetak Resi Belanja Struk Thermal
+          - ✅ Multi-device Realtime Cloud Firestore Sync
+          EOF
 
   report:
     name: 📊 Report and Build Status
@@ -131,9 +142,7 @@ jobs:
     steps:
       - name: Generate Build Status and Report
         run: |
-          REPO_OWNER="${{ github.repository_owner }}"
-          REPO_NAME="${{ github.event.repository.name }}"
-          PAGES_URL="https://${REPO_OWNER,,}.github.io/${REPO_NAME}/"
+          PAGES_URL="https://mionecart79.github.io/Smart-Grocery-Tractorr/"
           BUILD_STATUS="${{ needs.build.result }}"
           DEPLOY_STATUS="${{ needs.deploy.result }}"
 
@@ -160,11 +169,15 @@ jobs:
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${PAGES_URL}" alt="Scan QR Code PWA" width="200" height="200" />
           </p>
 
-          ### 🎯 Rubrik Fitur Siap Uji Guru:
+          ### 🎯 Rubrik Fitur Siap Uji Guru (Versi Terbaru):
           - [x] **Format Smartphone 9:16 (Max 430px)** - Centered di browser desktop dengan frame elegan.
           - [x] **Filter Supermarket Daerah** - Lotte Mart, Grand Lucky, AEON, Kantin Mb2.
           - [x] **Budget Terkunci** - Nominal tidak bisa diubah setelah tombol Confirm.
           - [x] **Store Diskon & Emote** - Rumus \`Harga2 = Harga - (Diskon * Harga)\`, emote ⬆ merah, ⬇︎ hijau, = kuning.
+          - [x] **Selector Lokasi Toko & Date Picker di Atas** - Memilih supermarket & tanggal belanja di ribbon atas.
+          - [x] **Menu Navigasi & Checklist Rencana Belanja** - Catat kebutuhan anti-impulsif dan tombol pindahkan yang dicentang ke troli otomatis.
+          - [x] **Form Tambah Produk Manual** - Input nama, kategori, kemasan satuan, kuantitas stepper, selisih harga teks merah, dan diskon toko.
           - [x] **List Keranjang & Transisi Font** - Warna font coklat (\`#622B14\`) fading ke **Full Merah** saat budget habis.
-          - [x] **Checkout & History** - Mengunci list dan menyimpan struk di riwayat.
+          - [x] **Checkout & Cetak Resi Belanja** - Format struk kasir thermal resmi yang bisa dicetak langsung.
+          - [x] **Multi-Device Realtime Cloud Firestore** - Sinkronisasi instan via \`onSnapshot()\` antar HP dan PC dengan fallback LocalStorage.
           EOF
