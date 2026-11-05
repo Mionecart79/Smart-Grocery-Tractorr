@@ -1,0 +1,8 @@
+{
+  "name": "smart-grocery-tractorr",
+  "version": "1.0.0",
+  "description": "Smart Grocery & Budget Safety Tracker with Cloud Firestore Realtime Sync",
+  "type": "module",
+  "private": true
+}
+

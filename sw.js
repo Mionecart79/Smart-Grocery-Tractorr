@@ -5,6 +5,7 @@ const ASSETS_TO_CACHE = [
   './index.html',
   './styles.css',
   './app.js',
+  './firebase-sync.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
