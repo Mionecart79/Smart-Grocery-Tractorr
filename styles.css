@@ -644,14 +644,122 @@ body {
   transition: width 0.3s ease, background-color 0.3s ease;
 }
 
+.custom-date-input {
+  width: 100%;
+  border: 1.5px solid var(--yellow-border);
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-initial);
+  outline: none;
+}
+
 .store-ribbon {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #FFFFFF;
+  border-bottom: 1.5px solid var(--yellow-border);
+  font-size: 11px;
+}
+
+.ribbon-session-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-selector-pill {
+  flex: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--yellow-soft);
+  border: 1.5px solid var(--yellow-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.session-selector-pill .ribbon-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--green-brand);
+  flex-shrink: 0;
+}
+
+.session-dropdown {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-initial);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  padding-right: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-selector-pill .ribbon-arrow {
+  position: absolute;
+  right: 6px;
+  pointer-events: none;
+  width: 11px;
+  height: 11px;
+  color: var(--text-initial);
+}
+
+.session-date-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--green-soft-bg);
+  border: 1.5px solid var(--green-mint);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+}
+
+.session-date-pill .ribbon-icon {
+  width: 12px;
+  height: 12px;
+  color: var(--green-dark);
+  flex-shrink: 0;
+}
+
+.session-date-field {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--green-dark);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.ribbon-stats-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 14px;
-  background: #FFFFFF;
-  border-bottom: 1px solid rgba(0,0,0,0.04);
-  font-size: 11px;
+  padding: 0 2px;
+}
+
+.ribbon-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .store-info-badge {
@@ -1736,6 +1844,745 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   FORM INPUT PRODUK BELANJA ("TAMBAH PRODUK") & BANNER
+   ========================================================================== */
+.add-product-banner {
+  margin-bottom: 8px;
+}
+
+.btn-open-add-product {
+  width: 100%;
+  background: linear-gradient(135deg, #FFF9DB 0%, #FEF08A 50%, #C8F7C5 100%);
+  border: 1.5px solid var(--yellow-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(98, 43, 20, 0.06);
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-align: left;
+}
+
+.btn-open-add-product:active {
+  transform: scale(0.98);
+}
+
+.btn-open-add-product i {
+  width: 22px;
+  height: 22px;
+  color: var(--green-brand);
+  flex-shrink: 0;
+}
+
+.btn-open-add-product .btn-text-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-open-add-product .main-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-initial);
+}
+
+.btn-open-add-product .sub-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.list-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-add-product-mini {
+  background: var(--yellow-warm);
+  border: 1px solid var(--yellow-border);
+  border-radius: var(--radius-pill);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-initial);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-add-product-mini i {
+  width: 13px;
+  height: 13px;
+}
+
+/* Modal Kartu Tambah Produk */
+.product-modal-card {
+  background: #FFFFFF;
+  border-radius: 22px;
+  width: 100%;
+  max-width: 395px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid var(--yellow-border);
+  box-shadow: var(--shadow-float);
+  animation: popInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popInModal {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.product-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--green-light) 0%, var(--yellow-soft) 100%);
+  border-bottom: 1.5px solid var(--yellow-border);
+}
+
+.product-modal-tag {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--green-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.product-modal-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-initial);
+  margin-top: 1px;
+}
+
+.btn-close-modal {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--yellow-border);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-initial);
+  cursor: pointer;
+}
+
+.product-modal-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.modal-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-field-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-initial);
+}
+
+.modal-text-input {
+  width: 100%;
+  background: var(--bg-app);
+  border: 1.5px solid var(--yellow-border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--text-dark);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.modal-text-input:focus {
+  border-color: var(--green-brand);
+  background: #FFFFFF;
+}
+
+.text-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.modal-grid-2col {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 8px;
+}
+
+.modal-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-app);
+  border: 1.5px solid var(--yellow-border);
+  border-radius: 10px;
+}
+
+.modal-select {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 8px 24px 8px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-initial);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.modal-select-arrow {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  width: 13px;
+  height: 13px;
+  color: var(--text-initial);
+}
+
+/* Kuantitas & Harga Row (Qty, Harga Satuan, Harga Bulan Lalu) */
+.modal-qty-price-row {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr 1fr;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.modal-qty-stepper {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--yellow-border);
+  border-radius: 10px;
+  background: var(--bg-app);
+  overflow: hidden;
+  height: 38px;
+}
+
+.btn-modal-step {
+  width: 32px;
+  height: 100%;
+  border: none;
+  background: var(--yellow-warm);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-initial);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.btn-modal-step:active {
+  background: var(--green-mint);
+}
+
+.modal-qty-input {
+  width: 100%;
+  min-width: 26px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-initial);
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.modal-qty-input::-webkit-outer-spin-button,
+.modal-qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Indikator Selisih Harga (TEKS MERAH Sesuai Prompt) */
+.price-diff-indicator-box {
+  background: #FFF5F5;
+  border: 1.5px solid #FEB2B2;
+  border-radius: 10px;
+  padding: 8px 10px;
+  animation: slideDownToast 0.2s ease;
+}
+
+.price-diff-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.price-diff-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.price-diff-red-text {
+  color: #DC2626 !important; /* Teks Merah Sesuai Spesifikasi */
+  font-weight: 800;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.35;
+}
+
+/* Potongan Diskon Toko */
+.discount-section {
+  background: var(--yellow-soft);
+  border: 1.5px solid var(--yellow-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.discount-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.discount-input-wrap {
+  width: 70px;
+}
+
+.discount-text-input {
+  width: 100%;
+  text-align: center;
+  background: #FFFFFF;
+  border: 1.5px solid var(--yellow-border);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  color: var(--text-initial);
+  outline: none;
+}
+
+.discount-chips-row {
+  display: flex;
+  gap: 4px;
+}
+
+.discount-chip {
+  flex: 1;
+  padding: 5px 2px;
+  font-size: 10.5px;
+  font-weight: 800;
+  border: 1px solid var(--yellow-border);
+  background: #FFFFFF;
+  border-radius: 6px;
+  color: var(--text-initial);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.discount-chip.active {
+  background: var(--green-brand);
+  color: #FFFFFF;
+  border-color: var(--green-dark);
+}
+
+.discount-info-card {
+  background: #FFFFFF;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px dashed var(--yellow-border);
+}
+
+.discount-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-label {
+  color: var(--text-muted);
+}
+
+.info-value-price {
+  color: var(--text-initial);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.info-value-savings {
+  color: var(--green-brand);
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.discount-per-item-row {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(0,0,0,0.06);
+}
+
+.per-item-savings-pill {
+  display: inline-block;
+  background: var(--green-soft-bg);
+  color: var(--green-dark);
+  font-weight: 800;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--green-mint);
+}
+
+/* Subtotal Baris Item */
+.modal-subtotal-card {
+  background: linear-gradient(135deg, #FFF9DB 0%, #FEF08A 100%);
+  border: 1.5px solid #F6E05E;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.subtotal-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-initial);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.subtotal-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-initial);
+}
+
+/* Tombol Aksi di Bawah Form: Batal & Simpan ke Troli */
+.modal-form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.btn-form-cancel {
+  background: #EDF2F7;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-form-cancel:active {
+  background: #E2E8F0;
+}
+
+.btn-form-save {
+  background: linear-gradient(135deg, var(--green-brand) 0%, #22543D 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(47, 133, 90, 0.25);
+  transition: transform 0.15s;
+}
+
+.btn-form-save:active {
+  transform: scale(0.98);
+}
+
+.btn-form-save i {
+  width: 15px;
+  height: 15px;
+}
+
+/* ==========================================================================
+   RESIP / STRUK BELANJA THERMAL SLIP & PRINT VIEWER
+   ========================================================================== */
+.receipt-slip-modal-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 380px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid var(--yellow-border);
+  box-shadow: var(--shadow-float);
+}
+
+.receipt-slip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--yellow-soft);
+  border-bottom: 1.5px solid var(--yellow-border);
+}
+
+.receipt-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-initial);
+}
+
+.printable-receipt-slip {
+  padding: 16px 20px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  background: #FFFDF9;
+  font-size: 11px;
+  color: #2D3748;
+}
+
+.receipt-store-brand {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.receipt-store-icon {
+  font-size: 24px;
+  margin-bottom: 2px;
+}
+
+.receipt-store-brand h2 {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-initial);
+  margin-bottom: 2px;
+}
+
+.receipt-store-brand p {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.receipt-meta-grid {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin: 6px 0;
+}
+
+.meta-label {
+  color: var(--text-muted);
+}
+
+.receipt-divider-dash {
+  border-top: 1px dashed #CBD5E0;
+  margin: 8px 0;
+}
+
+.receipt-items-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.receipt-item-row-print {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-main-line {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+.item-sub-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
+.receipt-summary-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.receipt-sum-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.receipt-sum-row.savings {
+  color: var(--green-brand);
+  font-weight: 700;
+}
+
+.receipt-sum-row.total {
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--text-initial);
+  border-top: 1px solid var(--yellow-border);
+  padding-top: 4px;
+  margin-top: 2px;
+}
+
+.receipt-sum-row.budget {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.receipt-sum-row.remaining {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.receipt-footer-notes {
+  text-align: center;
+  font-size: 9.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
+.receipt-quote {
+  font-style: italic;
+  margin: 2px 0 4px 0;
+}
+
+.receipt-modal-actions {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #FFFFFF;
+  border-top: 1.5px solid var(--yellow-border);
+}
+
+.btn-receipt-print {
+  background: var(--green-brand);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-receipt-print i {
+  width: 15px;
+  height: 15px;
+}
+
+.btn-receipt-close {
+  background: #EDF2F7;
+  border: none;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dark);
+  cursor: pointer;
+}
+
+/* History item receipt action button */
+.history-action-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px dashed var(--yellow-border);
+  margin-top: 8px;
+}
+
+.btn-receipt-trigger {
+  background: var(--yellow-warm);
+  border: 1px solid var(--yellow-border);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-initial);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.15s;
+}
+
+.btn-receipt-trigger:active {
+  transform: scale(0.96);
+}
+
+.btn-receipt-trigger i {
+  width: 13px;
+  height: 13px;
+}
+
+/* Print CSS */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-receipt-slip, .printable-receipt-slip * {
+    visibility: visible;
+  }
+  .printable-receipt-slip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 15px;
+    background: #FFF;
+    border: none;
+    box-shadow: none;
+  }
+  .no-print {
+    display: none !important;
   }
 }
 

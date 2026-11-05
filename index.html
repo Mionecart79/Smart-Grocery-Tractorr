@@ -119,7 +119,22 @@
               </div>
             </div>
 
-            <!-- 4. Tombol Confirm -->
+            <!-- 4. Tanggal Sesi Belanja -->
+            <div class="form-group">
+              <label for="setupDateInput" class="form-label">
+                <i data-lucide="calendar"></i> 4. Tanggal Sesi Belanja
+              </label>
+              <div class="custom-select-wrapper">
+                <input 
+                  type="date" 
+                  id="setupDateInput" 
+                  class="custom-date-input" 
+                  onchange="if(this.value) APP_STATE.shoppingDate = this.value"
+                >
+              </div>
+            </div>
+
+            <!-- 5. Tombol Confirm -->
             <button type="submit" id="btnConfirmSetup" class="btn-confirm-setup">
               <span>Confirm & Ambil Data Toko</span>
               <i data-lucide="arrow-right"></i>
@@ -179,15 +194,37 @@
           </div>
         </div>
 
-        <!-- Store Context Ribbon (Current Supermarket & Active Discounts) -->
+        <!-- Store Context Ribbon (Informasi Sesi Belanja di Bagian Atas) -->
         <div class="store-ribbon">
-          <div class="store-info-badge">
-            <i data-lucide="map-pin"></i>
-            <span id="currentSupermarketName">Supermarket</span>
+          <div class="ribbon-session-row">
+            <!-- 1. Selector Lokasi Toko Belanja -->
+            <div class="session-selector-pill" title="Ubah Lokasi Supermarket">
+              <i data-lucide="map-pin" class="ribbon-icon"></i>
+              <select id="sessionSupermarketSelect" class="session-dropdown" onchange="handleSessionStoreChange(this.value)">
+                <!-- Populated dynamically with all supermarkets across regions -->
+              </select>
+              <i data-lucide="chevron-down" class="ribbon-arrow"></i>
+            </div>
+
+            <!-- Date Picker untuk Memilih Tanggal Belanja -->
+            <div class="session-date-pill" title="Tanggal Sesi Belanja">
+              <i data-lucide="calendar" class="ribbon-icon"></i>
+              <input 
+                type="date" 
+                id="sessionShoppingDatePicker" 
+                class="session-date-field" 
+                onchange="handleSessionDateChange(this.value)"
+              >
+            </div>
           </div>
-          <div class="cart-quick-summary">
-            <span>Terpakai: <strong id="ribbonSpentAmount">Rp 0</strong></span>
-            <span class="cloud-sync-tag" id="cloudSyncTag" title="Tersinkronisasi Realtime dengan Cloud Firestore">☁️ Realtime</span>
+
+          <div class="ribbon-stats-row">
+            <div class="cart-quick-summary">
+              <span>Terpakai: <strong id="ribbonSpentAmount">Rp 0</strong></span>
+            </div>
+            <div class="ribbon-badge-wrap">
+              <span class="cloud-sync-tag" id="cloudSyncTag" title="Tersinkronisasi Realtime dengan Cloud Firestore">☁️ Realtime</span>
+            </div>
           </div>
         </div>
 
@@ -196,6 +233,17 @@
           
           <!-- TAB 1: STORE (Katalog Belanja dengan Foto, Harga, Diskon, Emote) -->
           <section id="tabContentStore" class="tab-view active-view">
+            <!-- Tombol "Tambah Produk" Utama (Sesuai Permintaan Form Input Produk Belanja) -->
+            <div class="add-product-banner">
+              <button type="button" class="btn-open-add-product" onclick="openAddProductModal()">
+                <i data-lucide="plus-circle"></i>
+                <div class="btn-text-wrap">
+                  <span class="main-label">+ Tambah Produk Belanja</span>
+                  <span class="sub-label">Input nama, kategori, qty, harga diskon & tren</span>
+                </div>
+              </button>
+            </div>
+
             <!-- Search & Category Filters -->
             <div class="store-controls">
               <div class="search-box">
@@ -233,9 +281,14 @@
                 <h2>Troli Belanja Kamu</h2>
                 <span id="listItemsCount" class="items-subtitle">0 barang di dalam troli</span>
               </div>
-              <button class="btn-clear-cart" onclick="clearCartPrompt()" title="Kosongkan Troli">
-                <i data-lucide="trash-2"></i> Kosongkan
-              </button>
+              <div class="list-header-actions">
+                <button class="btn-add-product-mini" onclick="openAddProductModal()" title="Tambah Produk Manual">
+                  <i data-lucide="plus"></i> Tambah
+                </button>
+                <button class="btn-clear-cart" onclick="clearCartPrompt()" title="Kosongkan Troli">
+                  <i data-lucide="trash-2"></i> Kosongkan
+                </button>
+              </div>
             </div>
 
             <!-- List Items Container formatted with X and borders -->
@@ -324,6 +377,275 @@
           <p id="loadingSubtitle">Mengambil katalog harga & promo diskon terbaru...</p>
           <div class="loading-progress-bar">
             <div class="loading-progress-fill" id="loadingProgressFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Form Input Produk Belanja ("Tambah Produk") -->
+      <div id="addProductModal" class="modal-overlay">
+        <div class="product-modal-card">
+          <!-- Header Modal: Label "Input Produk" -->
+          <div class="product-modal-header">
+            <div class="header-title-wrap">
+              <span class="product-modal-tag">✨ Tambah ke Troli</span>
+              <h3 class="product-modal-title">Input Produk</h3>
+            </div>
+            <button type="button" class="btn-close-modal" onclick="closeModal('addProductModal')" title="Tutup">✕</button>
+          </div>
+
+          <form id="addProductForm" class="product-modal-body" onsubmit="event.preventDefault(); saveCustomProductToCart();">
+            <!-- 1. Nama Produk: Kotak teks (input manual) -->
+            <div class="modal-field-group">
+              <label for="customProdName" class="modal-field-label">Nama Produk</label>
+              <input 
+                type="text" 
+                id="customProdName" 
+                class="modal-text-input" 
+                placeholder="Contoh: Beras Rojolele 5kg, Telur Ayam..." 
+                required
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- 2. Baris Kategori & Kemasan Satuan (Berjajar) -->
+            <div class="modal-grid-2col">
+              <!-- Kategori: Dropdown/Selector -->
+              <div class="modal-field-group">
+                <label for="customProdCategory" class="modal-field-label">Kategori</label>
+                <div class="modal-select-wrapper">
+                  <select id="customProdCategory" class="modal-select" required>
+                    <option value="Bahan Pokok">Bahan Pokok</option>
+                    <option value="Makanan dan Minuman">Makanan dan Minuman</option>
+                    <option value="Bahan/Bahan Kebersihan">Bahan/Bahan Kebersihan</option>
+                    <option value="Dapur dan Bumbu">Dapur dan Bumbu</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                  <i data-lucide="chevron-down" class="modal-select-arrow"></i>
+                </div>
+              </div>
+
+              <!-- Kemasan Satuan (di sebelah kanan Kategori) -->
+              <div class="modal-field-group">
+                <label for="customProdUnit" class="modal-field-label">Kemasan Satuan</label>
+                <div class="modal-select-wrapper">
+                  <select id="customProdUnit" class="modal-select" required>
+                    <option value="karung/kg">karung/kg</option>
+                    <option value="pcs (buah)" selected>pcs (buah)</option>
+                    <option value="kg (kilogram)">kg (kilogram)</option>
+                    <option value="liter">liter</option>
+                    <option value="pack">pack</option>
+                    <option value="pouch">pouch</option>
+                    <option value="botol">botol</option>
+                    <option value="kaleng">kaleng</option>
+                    <option value="sachet">sachet</option>
+                    <option value="dus">dus</option>
+                  </select>
+                  <i data-lucide="chevron-down" class="modal-select-arrow"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Kuantitas & Harga (Berjajar) -->
+            <div class="modal-qty-price-row">
+              <!-- Kuantitas: Input angka manual ATAU tombol plus/minus (- / +) -->
+              <div class="modal-field-group modal-qty-col">
+                <label class="modal-field-label">Kuantitas</label>
+                <div class="modal-qty-stepper">
+                  <button type="button" class="btn-modal-step" onclick="stepAddProductQty(-1)" title="Kurangi">−</button>
+                  <input 
+                    type="number" 
+                    id="customProdQty" 
+                    class="modal-qty-input" 
+                    value="1" 
+                    min="1" 
+                    max="999" 
+                    inputmode="numeric" 
+                    required
+                    oninput="calculateAddProductForm()"
+                  >
+                  <button type="button" class="btn-modal-step" onclick="stepAddProductQty(+1)" title="Tambah">+</button>
+                </div>
+              </div>
+
+              <!-- Harga Satuan (Rp) & Harga Bulan Lalu (Rp): Berjajar di sampingnya -->
+              <div class="modal-field-group modal-price-col">
+                <label for="customProdPrice" class="modal-field-label">Harga Satuan (Rp)</label>
+                <input 
+                  type="text" 
+                  id="customProdPrice" 
+                  class="modal-text-input text-mono font-bold" 
+                  placeholder="0" 
+                  inputmode="numeric" 
+                  required
+                  oninput="handleNumericPriceInput(this); calculateAddProductForm();"
+                >
+              </div>
+
+              <div class="modal-field-group modal-last-price-col">
+                <label for="customProdLastMonthPrice" class="modal-field-label">Bulan Lalu (Rp)</label>
+                <input 
+                  type="text" 
+                  id="customProdLastMonthPrice" 
+                  class="modal-text-input text-mono" 
+                  placeholder="0" 
+                  inputmode="numeric" 
+                  oninput="handleNumericPriceInput(this); calculateAddProductForm();"
+                >
+              </div>
+            </div>
+
+            <!-- 4. Indikator Selisih Harga (Teks Merah) -->
+            <!-- Muncul otomatis setelah harga saat ini & harga bulan lalu terisi -->
+            <div id="customProdPriceDiffContainer" class="price-diff-indicator-box" style="display: none;">
+              <div class="price-diff-content">
+                <span class="price-diff-icon">📈</span>
+                <span id="customProdPriceDiffText" class="price-diff-red-text">
+                  Selisih: +Rp 0 (+0.0% vs bulan lalu)
+                </span>
+              </div>
+            </div>
+
+            <!-- 5. Potongan Diskon Toko -->
+            <div class="modal-field-group discount-section">
+              <div class="discount-header-row">
+                <label for="customProdDiscount" class="modal-field-label">Potongan Diskon Toko</label>
+                <div class="discount-input-wrap">
+                  <input 
+                    type="text" 
+                    id="customProdDiscount" 
+                    class="discount-text-input" 
+                    placeholder="0%" 
+                    inputmode="numeric"
+                    oninput="handleDiscountPercentInput(this); calculateAddProductForm();"
+                  >
+                </div>
+              </div>
+
+              <!-- Tombol Pintasan Diskon: 0%, 5%, 10%, 20%, 50% -->
+              <div class="discount-chips-row">
+                <button type="button" class="discount-chip active" onclick="setAddProductDiscount(0, this)">0%</button>
+                <button type="button" class="discount-chip" onclick="setAddProductDiscount(5, this)">5%</button>
+                <button type="button" class="discount-chip" onclick="setAddProductDiscount(10, this)">10%</button>
+                <button type="button" class="discount-chip" onclick="setAddProductDiscount(20, this)">20%</button>
+                <button type="button" class="discount-chip" onclick="setAddProductDiscount(50, this)">50%</button>
+              </div>
+
+              <!-- Info Diskon: Harga setelah diskon, Total hemat, dan info per item jika qty > 1 -->
+              <div class="discount-info-card">
+                <div class="discount-info-row">
+                  <span class="info-label">Harga Setelah Diskon:</span>
+                  <strong id="customProdDiscountedPrice" class="info-value-price">Rp 0</strong>
+                </div>
+                <div class="discount-info-row">
+                  <span class="info-label">Total Hemat:</span>
+                  <span id="customProdTotalSavings" class="info-value-savings">Rp 0</span>
+                </div>
+                <!-- Informasi khusus jika qty > 1 -->
+                <div id="customProdPerItemSavingsRow" class="discount-per-item-row" style="display: none;">
+                  <span id="customProdPerItemSavingsText" class="per-item-savings-pill">Hemat Rp 0 per item</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. Subtotal Baris Item (Perhitungan otomatis real-time tanpa reload) -->
+            <div class="modal-subtotal-card">
+              <span class="subtotal-label">Subtotal Baris Item</span>
+              <span id="customProdSubtotal" class="subtotal-amount">Rp 0</span>
+            </div>
+
+            <!-- 7. Tombol Aksi di Paling Bawah Form: Batal & Simpan ke Troli -->
+            <div class="modal-form-actions">
+              <button type="button" class="btn-form-cancel" onclick="closeModal('addProductModal')">
+                Batal
+              </button>
+              <button type="submit" id="btnSaveProductToCart" class="btn-form-save">
+                <i data-lucide="shopping-bag"></i>
+                <span>Simpan ke Troli</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL: Ringkasan & Cetak Resi Belanja (Receipt Slip Viewer) -->
+      <div id="receiptViewModal" class="modal-overlay">
+        <div class="receipt-slip-modal-card">
+          <div class="receipt-slip-header no-print">
+            <span class="receipt-badge">🧾 Struk Pembelian Resmi</span>
+            <button type="button" class="btn-close-modal" onclick="closeModal('receiptViewModal')" title="Tutup">✕</button>
+          </div>
+
+          <!-- Printable Receipt Slip Area -->
+          <div class="printable-receipt-slip" id="printableReceiptArea">
+            <div class="receipt-store-brand">
+              <div class="receipt-store-icon">🛒</div>
+              <h2 id="receiptSlipStoreName">Lotte Mart Grocery - Puri Indah</h2>
+              <p id="receiptSlipRegion">Jakarta Barat</p>
+              <div class="receipt-divider-dash"></div>
+            </div>
+
+            <div class="receipt-meta-grid">
+              <div>
+                <span class="meta-label">Tanggal Belanja:</span>
+                <strong id="receiptSlipDate">Today</strong>
+              </div>
+              <div style="text-align: right;">
+                <span class="meta-label">Metode:</span>
+                <strong>Widihh Trolley</strong>
+              </div>
+            </div>
+
+            <div class="receipt-divider-dash"></div>
+
+            <!-- Items Table in Receipt -->
+            <div class="receipt-items-table" id="receiptSlipItemsList">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <div class="receipt-divider-dash"></div>
+
+            <!-- Financial Summary -->
+            <div class="receipt-summary-table">
+              <div class="receipt-sum-row">
+                <span>Subtotal Barang:</span>
+                <span id="receiptSlipSubtotal">Rp 0</span>
+              </div>
+              <div class="receipt-sum-row savings">
+                <span>Total Diskon & Hemat:</span>
+                <span id="receiptSlipSavings">-Rp 0</span>
+              </div>
+              <div class="receipt-sum-row total">
+                <span>TOTAL BELANJA (KASIR):</span>
+                <span id="receiptSlipTotal">Rp 0</span>
+              </div>
+              <div class="receipt-sum-row budget">
+                <span>Batas Saldo Budget:</span>
+                <span id="receiptSlipBudget">Rp 0</span>
+              </div>
+              <div class="receipt-sum-row remaining">
+                <span>Sisa Uang Belanja:</span>
+                <span id="receiptSlipRemaining">Rp 0</span>
+              </div>
+            </div>
+
+            <div class="receipt-divider-dash"></div>
+
+            <div class="receipt-footer-notes">
+              <p>✨ Terima kasih telah belanja hemat & tertib anggaran!</p>
+              <p class="receipt-quote">"Dompet aman, perut kenyang, anak rantau tenang."</p>
+              <small id="receiptSlipTimestamp">ID Sesi: #WID-001</small>
+            </div>
+          </div>
+
+          <!-- Actions: Cetak Resi (window.print) & Tutup -->
+          <div class="receipt-modal-actions no-print">
+            <button type="button" class="btn-receipt-print" onclick="printReceiptSlip()">
+              <i data-lucide="printer"></i>
+              <span>Cetak Resi Belanja</span>
+            </button>
+            <button type="button" class="btn-receipt-close" onclick="closeModal('receiptViewModal')">
+              Tutup
+            </button>
           </div>
         </div>
       </div>

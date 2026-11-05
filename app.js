@@ -701,7 +701,8 @@ function handleConfirmSetup() {
   setTimeout(() => {
     // Generate supermarket-specific catalog with custom pricing modifier
     loadStoreDatabase(APP_STATE.selectedSupermarket.id);
-    APP_STATE.shoppingDate = new Date().toISOString();
+    const setupDate = document.getElementById('setupDateInput')?.value;
+    APP_STATE.shoppingDate = setupDate || new Date().toISOString().split('T')[0];
 
     loadingModal.classList.remove('active');
     enterMainAppScreen();
@@ -742,10 +743,9 @@ function enterMainAppScreen(silent = false) {
   document.getElementById('mainAppScreen').classList.add('active-screen');
   APP_STATE.currentScreen = 'main';
 
-  // Update header info
-  if (APP_STATE.selectedSupermarket) {
-    document.getElementById('currentSupermarketName').textContent = APP_STATE.selectedSupermarket.name;
-  }
+  // Update header info & in-session selectors
+  populateSessionSupermarketDropdown();
+  updateSessionDatePickerUI();
   
   // Render views
   renderStoreCatalog();
@@ -756,6 +756,83 @@ function enterMainAppScreen(silent = false) {
     showToast(`Selamat belanja di ${APP_STATE.selectedSupermarket.name}! Budget terkunci.`, 'success');
     feedback.itemAdded();
   }
+}
+
+/**
+ * Mengisi Dropdown Selector Lokasi Toko di Ribbon Atas
+ */
+function populateSessionSupermarketDropdown() {
+  const select = document.getElementById('sessionSupermarketSelect');
+  if (!select) return;
+
+  select.innerHTML = '';
+  Object.keys(SUPERMARKET_REGIONS).forEach(region => {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = region;
+    SUPERMARKET_REGIONS[region].forEach(sm => {
+      const opt = document.createElement('option');
+      opt.value = sm.id;
+      opt.textContent = `${sm.name}`;
+      if (APP_STATE.selectedSupermarket && APP_STATE.selectedSupermarket.id === sm.id) {
+        opt.selected = true;
+      }
+      optgroup.appendChild(opt);
+    });
+    select.appendChild(optgroup);
+  });
+}
+
+/**
+ * Handle perubahan Lokasi Toko langsung dari Ribbon Sesi Belanja di Atas
+ */
+function handleSessionStoreChange(newSupermarketId) {
+  let found = null;
+  let foundRegion = '';
+
+  for (const [region, list] of Object.entries(SUPERMARKET_REGIONS)) {
+    const sm = list.find(s => s.id === newSupermarketId);
+    if (sm) {
+      found = sm;
+      foundRegion = region;
+      break;
+    }
+  }
+
+  if (found) {
+    APP_STATE.selectedSupermarket = found;
+    APP_STATE.selectedRegion = foundRegion;
+
+    loadStoreDatabase(found.id);
+    renderStoreCatalog();
+    syncSessionToFirestore();
+
+    feedback.tap();
+    showToast(`Lokasi toko dialihkan ke: ${found.name}`, 'info');
+  }
+}
+
+/**
+ * Handle perubahan Tanggal Sesi Belanja dari Date Picker di Ribbon Atas
+ */
+function handleSessionDateChange(newDateStr) {
+  if (!newDateStr) return;
+  APP_STATE.shoppingDate = newDateStr;
+  syncSessionToFirestore();
+  showToast(`Tanggal sesi belanja: ${newDateStr}`, 'info');
+}
+
+/**
+ * Sinkronisasi Nilai Date Picker UI
+ */
+function updateSessionDatePickerUI() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dateStr = APP_STATE.shoppingDate || todayStr;
+
+  const setupDate = document.getElementById('setupDateInput');
+  const sessionDate = document.getElementById('sessionShoppingDatePicker');
+
+  if (setupDate && !setupDate.value) setupDate.value = dateStr;
+  if (sessionDate) sessionDate.value = dateStr;
 }
 
 // =============================================================================
@@ -1241,16 +1318,23 @@ function handleCheckout() {
   }
 
   const total = getCartTotal();
+  const totalSavings = APP_STATE.cart.reduce((sum, item) => {
+    const orig = item.originalPrice || item.effectivePrice;
+    return sum + Math.max(0, (orig - item.effectivePrice) * item.quantity);
+  }, 0);
 
   // Create immutable receipt snapshot
   const now = new Date();
+  const sessionDateObj = APP_STATE.shoppingDate ? new Date(APP_STATE.shoppingDate) : now;
   const receiptSession = {
     id: 'chk_' + Date.now(),
-    date: now.toISOString(),
-    displayDate: formatReceiptDate(now),
-    supermarketName: APP_STATE.selectedSupermarket.name,
+    date: APP_STATE.shoppingDate || now.toISOString(),
+    displayDate: formatReceiptDate(sessionDateObj),
+    supermarketName: APP_STATE.selectedSupermarket ? APP_STATE.selectedSupermarket.name : 'Supermarket',
+    region: APP_STATE.selectedRegion || '',
     budgetInitial: APP_STATE.budget,
     totalSpent: total,
+    totalSavings: totalSavings,
     items: JSON.parse(JSON.stringify(APP_STATE.cart)) // Deep copy
   };
 
@@ -1310,17 +1394,264 @@ function finishCheckoutFlow() {
 }
 
 // =============================================================================
-// 11. TAB 3: HISTORY (Riwayat Belanja Format Spesifik)
-// Format Tiles:
-// Today/Yesterday/Tanggal - Harga
-// --------------------
-// Nama barang
-// | |
-// | | Hargatotal [] quantity
-// ---------------------
+// 10B. FORM INPUT PRODUK BELANJA ("TAMBAH PRODUK")
+// Sesuai Struktur & Elemen Persis Ke Bawah:
+// - Label "Input Produk"
+// - Nama Produk: Kotak teks (input manual)
+// - Baris Kategori & Kemasan Satuan (Berjajar)
+// - Kuantitas & Harga: Qty (- / +), Harga Satuan (Rp), Harga Bulan Lalu (Rp)
+// - Indikator Selisih Harga (Teks Merah)
+// - Potongan Diskon Toko (Manual / Pintasan + Hemat per item jika qty > 1)
+// - Subtotal Baris Item (Perhitungan otomatis real-time)
+// - Tombol Aksi: "Batal" & "Simpan ke Troli"
+// =============================================================================
+
+function openAddProductModal() {
+  feedback.tap();
+  resetAddProductForm();
+  document.getElementById('addProductModal')?.classList.add('active');
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+  setTimeout(() => {
+    document.getElementById('customProdName')?.focus();
+  }, 120);
+}
+
+function resetAddProductForm() {
+  const nameInput = document.getElementById('customProdName');
+  const catSelect = document.getElementById('customProdCategory');
+  const unitSelect = document.getElementById('customProdUnit');
+  const qtyInput = document.getElementById('customProdQty');
+  const priceInput = document.getElementById('customProdPrice');
+  const lastPriceInput = document.getElementById('customProdLastMonthPrice');
+  const discountInput = document.getElementById('customProdDiscount');
+
+  if (nameInput) nameInput.value = '';
+  if (catSelect) catSelect.value = 'Bahan Pokok';
+  if (unitSelect) unitSelect.value = 'pcs (buah)';
+  if (qtyInput) qtyInput.value = '1';
+  if (priceInput) priceInput.value = '';
+  if (lastPriceInput) lastPriceInput.value = '';
+  if (discountInput) discountInput.value = '0%';
+
+  // Reset active chip
+  document.querySelectorAll('.discount-chip').forEach((c, idx) => {
+    if (idx === 0) c.classList.add('active');
+    else c.classList.remove('active');
+  });
+
+  calculateAddProductForm();
+}
+
+function stepAddProductQty(delta) {
+  const qtyInput = document.getElementById('customProdQty');
+  if (!qtyInput) return;
+  let val = parseInt(qtyInput.value, 10) || 1;
+  val = Math.max(1, Math.min(999, val + delta));
+  qtyInput.value = val;
+  feedback.tap();
+  calculateAddProductForm();
+}
+
+function handleNumericPriceInput(input) {
+  const raw = parseRupiahInput(input.value);
+  if (raw === 0 && input.value.trim() === '') {
+    input.value = '';
+  } else {
+    input.value = raw.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+}
+
+function handleDiscountPercentInput(input) {
+  let val = input.value.replace(/[^0-9.]/g, '');
+  let num = parseFloat(val);
+  if (isNaN(num)) num = 0;
+  num = Math.max(0, Math.min(100, num));
+
+  // Update active chip
+  document.querySelectorAll('.discount-chip').forEach(c => {
+    const chipVal = parseFloat(c.textContent.replace('%', ''));
+    if (chipVal === num) c.classList.add('active');
+    else c.classList.remove('active');
+  });
+}
+
+function setAddProductDiscount(pct, btnEl) {
+  const discountInput = document.getElementById('customProdDiscount');
+  if (discountInput) {
+    discountInput.value = pct + '%';
+  }
+  document.querySelectorAll('.discount-chip').forEach(c => c.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  feedback.tap();
+  calculateAddProductForm();
+}
+
+/**
+ * Kalkulasi Real-time Input Produk:
+ * - Selisih harga satuan & persentase kenaikan/penurunan (Teks Merah)
+ * - Harga setelah diskon & Total hemat (serta Hemat per item jika qty > 1)
+ * - Subtotal baris item (effectivePrice * qty)
+ */
+function calculateAddProductForm() {
+  const qtyInput = document.getElementById('customProdQty');
+  const priceInput = document.getElementById('customProdPrice');
+  const lastPriceInput = document.getElementById('customProdLastMonthPrice');
+  const discountInput = document.getElementById('customProdDiscount');
+
+  const qty = Math.max(1, parseInt(qtyInput?.value, 10) || 1);
+  const rawPrice = parseRupiahInput(priceInput?.value || '');
+  const lastMonthPrice = parseRupiahInput(lastPriceInput?.value || '');
+  
+  let discPct = 0;
+  if (discountInput && discountInput.value) {
+    const parsed = parseFloat(discountInput.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsed)) {
+      discPct = Math.max(0, Math.min(100, parsed));
+    }
+  }
+
+  // 1. Indikator Selisih Harga (Teks Merah Sesuai Spesifikasi)
+  const diffBox = document.getElementById('customProdPriceDiffContainer');
+  const diffText = document.getElementById('customProdPriceDiffText');
+  if (diffBox && diffText) {
+    if (rawPrice > 0 && lastMonthPrice > 0) {
+      const diff = rawPrice - lastMonthPrice;
+      const pct = lastMonthPrice > 0 ? ((diff / lastMonthPrice) * 100) : 0;
+      diffBox.style.display = 'block';
+
+      if (diff > 0) {
+        diffText.textContent = `🔺 Selisih: +${formatRupiah(diff)} (+${pct.toFixed(1)}% vs bulan lalu)`;
+      } else if (diff < 0) {
+        diffText.textContent = `🔻 Selisih: -${formatRupiah(Math.abs(diff))} (${pct.toFixed(1)}% vs bulan lalu)`;
+      } else {
+        diffText.textContent = `➖ Selisih: Rp 0 (Harga stabil sama dengan bulan lalu)`;
+      }
+    } else {
+      diffBox.style.display = 'none';
+    }
+  }
+
+  // 2. Diskon & Hemat
+  const hasDiscount = discPct > 0;
+  const effectivePrice = hasDiscount ? Math.round(rawPrice * (1 - (discPct / 100))) : rawPrice;
+  const savingsPerItem = Math.max(0, rawPrice - effectivePrice);
+  const totalSavings = savingsPerItem * qty;
+
+  const discountedPriceEl = document.getElementById('customProdDiscountedPrice');
+  const totalSavingsEl = document.getElementById('customProdTotalSavings');
+  const perItemRow = document.getElementById('customProdPerItemSavingsRow');
+  const perItemText = document.getElementById('customProdPerItemSavingsText');
+
+  if (discountedPriceEl) discountedPriceEl.textContent = formatRupiah(effectivePrice);
+  if (totalSavingsEl) totalSavingsEl.textContent = formatRupiah(totalSavings);
+
+  if (perItemRow && perItemText) {
+    if (qty > 1 && savingsPerItem > 0) {
+      perItemRow.style.display = 'block';
+      perItemText.textContent = `Hemat ${formatRupiah(savingsPerItem)} per item`;
+    } else {
+      perItemRow.style.display = 'none';
+    }
+  }
+
+  // 3. Subtotal Baris Item (Perhitungan otomatis)
+  const subtotal = effectivePrice * qty;
+  const subtotalEl = document.getElementById('customProdSubtotal');
+  if (subtotalEl) {
+    subtotalEl.textContent = formatRupiah(subtotal);
+  }
+}
+
+/**
+ * Simpan Produk Baru ke Troli Belanja Aktif
+ */
+function saveCustomProductToCart() {
+  const nameInput = document.getElementById('customProdName');
+  const catSelect = document.getElementById('customProdCategory');
+  const unitSelect = document.getElementById('customProdUnit');
+  const qtyInput = document.getElementById('customProdQty');
+  const priceInput = document.getElementById('customProdPrice');
+  const lastPriceInput = document.getElementById('customProdLastMonthPrice');
+  const discountInput = document.getElementById('customProdDiscount');
+
+  const prodName = nameInput?.value.trim();
+  if (!prodName) {
+    showToast('Nama produk wajib diisi!', 'warning');
+    nameInput?.focus();
+    return;
+  }
+
+  const rawPrice = parseRupiahInput(priceInput?.value || '');
+  if (!rawPrice || rawPrice <= 0) {
+    showToast('Harga satuan (Rp) wajib diisi dengan nominal yang valid!', 'warning');
+    priceInput?.focus();
+    return;
+  }
+
+  const qty = Math.max(1, parseInt(qtyInput?.value, 10) || 1);
+  const lastMonthPrice = parseRupiahInput(lastPriceInput?.value || '');
+  
+  let discPct = 0;
+  if (discountInput && discountInput.value) {
+    const parsed = parseFloat(discountInput.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsed)) discPct = Math.max(0, Math.min(100, parsed));
+  }
+
+  const effectivePrice = discPct > 0 ? Math.round(rawPrice * (1 - (discPct / 100))) : rawPrice;
+  const subtotal = effectivePrice * qty;
+
+  // Cek apakah penambahan melebihi budget limit
+  const currentTotal = getCartTotal();
+  if (currentTotal + subtotal > APP_STATE.budget) {
+    feedback.budgetExhausted();
+    highlightBudgetDanger();
+    const remaining = Math.max(0, APP_STATE.budget - currentTotal);
+    showToast(`⚠️ Melebihi budget! Subtotal ${formatRupiah(subtotal)}, sisa budget hanya ${formatRupiah(remaining)}.`, 'danger');
+    return;
+  }
+
+  // Tentukan tren harga vs bulan lalu
+  let trend = 'equal';
+  if (lastMonthPrice > 0) {
+    if (rawPrice > lastMonthPrice) trend = 'up';
+    else if (rawPrice < lastMonthPrice) trend = 'down';
+  }
+
+  const customItem = {
+    id: 'prod-' + Date.now(),
+    name: prodName,
+    category: catSelect?.value || 'Lainnya',
+    unit: unitSelect?.value || 'pcs (buah)',
+    quantity: qty,
+    originalPrice: rawPrice,
+    lastMonthPrice: lastMonthPrice || rawPrice,
+    discount: discPct / 100,
+    effectivePrice: effectivePrice,
+    trend: trend,
+    isCustom: true
+  };
+
+  APP_STATE.cart.push(customItem);
+  closeModal('addProductModal');
+
+  renderCartList();
+  updateCartAndBudgetDisplays();
+  syncSessionToFirestore();
+
+  feedback.itemAdded();
+  showToast(`✨ ${prodName} (${qty} ${customItem.unit}) berhasil dimasukkan ke troli!`, 'success');
+}
+
+// =============================================================================
+// 11. TAB 3: HISTORY & CETAK RESI BELANJA
 // =============================================================================
 
 function formatReceiptDate(dateObj) {
+  if (!dateObj || isNaN(dateObj.getTime())) {
+    dateObj = new Date();
+  }
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
@@ -1353,14 +1684,7 @@ function renderHistoryView() {
 
   emptyState.style.display = 'none';
 
-  // Format tiles matching specification:
-  // Today/Yesterday/Tanggal - Harga
-  // --------------------
-  // Nama barang
-  // | |
-  // | | Hargatotal [] quantity
-  // ---------------------
-  container.innerHTML = APP_STATE.history.map(session => {
+  container.innerHTML = APP_STATE.history.map((session, index) => {
     const itemsHtml = session.items.map(item => {
       const itemTotal = item.effectivePrice * item.quantity;
       return `
@@ -1368,7 +1692,7 @@ function renderHistoryView() {
           <span class="history-item-name">${item.name}</span>
           <div class="history-item-subrow">
             <span class="history-item-hargatotal">${formatRupiah(itemTotal)}</span>
-            <span class="history-item-qty-tag">[${item.quantity}] quantity</span>
+            <span class="history-item-qty-tag">[${item.quantity}] ${item.unit || 'quantity'}</span>
           </div>
         </div>
       `;
@@ -1383,6 +1707,12 @@ function renderHistoryView() {
         <div class="history-items-list">
           ${itemsHtml}
         </div>
+        <div class="history-action-row">
+          <button type="button" class="btn-receipt-trigger" onclick="openReceiptModal(${index})" title="Lihat dan Cetak Resi">
+            <i data-lucide="printer"></i>
+            <span>Cetak / Lihat Resi</span>
+          </button>
+        </div>
       </div>
     `;
   }).join('');
@@ -1390,6 +1720,82 @@ function renderHistoryView() {
   if (window.lucide) {
     lucide.createIcons();
   }
+}
+
+/**
+ * Membuka Modal Struk / Resi Belanja untuk Dicetak
+ */
+function openReceiptModal(historyIndex) {
+  const session = APP_STATE.history[historyIndex];
+  if (!session) return;
+
+  feedback.tap();
+  const storeNameEl = document.getElementById('receiptSlipStoreName');
+  const regionEl = document.getElementById('receiptSlipRegion');
+  const dateEl = document.getElementById('receiptSlipDate');
+  const itemsContainer = document.getElementById('receiptSlipItemsList');
+  const subtotalEl = document.getElementById('receiptSlipSubtotal');
+  const savingsEl = document.getElementById('receiptSlipSavings');
+  const totalEl = document.getElementById('receiptSlipTotal');
+  const budgetEl = document.getElementById('receiptSlipBudget');
+  const remainingEl = document.getElementById('receiptSlipRemaining');
+  const timestampEl = document.getElementById('receiptSlipTimestamp');
+
+  if (storeNameEl) storeNameEl.textContent = session.supermarketName || 'Supermarket';
+  if (regionEl) regionEl.textContent = session.region || 'Wilayah Belanja';
+  if (dateEl) dateEl.textContent = session.displayDate || 'Today';
+
+  let rawSubtotal = 0;
+  let totalSavings = 0;
+
+  if (itemsContainer) {
+    itemsContainer.innerHTML = session.items.map(item => {
+      const orig = item.originalPrice || item.effectivePrice;
+      const itemSubtotal = item.effectivePrice * item.quantity;
+      const itemOrigTotal = orig * item.quantity;
+      const itemSaved = Math.max(0, itemOrigTotal - itemSubtotal);
+      
+      rawSubtotal += itemOrigTotal;
+      totalSavings += itemSaved;
+
+      return `
+        <div class="receipt-item-row-print">
+          <div class="item-main-line">
+            <span>${item.name}</span>
+            <span>${formatRupiah(itemSubtotal)}</span>
+          </div>
+          <div class="item-sub-line">
+            <span>${item.quantity} ${item.unit || 'pcs'} x ${formatRupiah(item.effectivePrice)}</span>
+            ${itemSaved > 0 ? `<span>(Hemat ${formatRupiah(itemSaved)})</span>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const finalTotal = session.totalSpent || 0;
+  const budgetVal = session.budgetInitial || 0;
+  const remaining = Math.max(0, budgetVal - finalTotal);
+
+  if (subtotalEl) subtotalEl.textContent = formatRupiah(rawSubtotal || finalTotal);
+  if (savingsEl) savingsEl.textContent = `-${formatRupiah(totalSavings || session.totalSavings || 0)}`;
+  if (totalEl) totalEl.textContent = formatRupiah(finalTotal);
+  if (budgetEl) budgetEl.textContent = formatRupiah(budgetVal);
+  if (remainingEl) remainingEl.textContent = formatRupiah(remaining);
+  if (timestampEl) timestampEl.textContent = `ID Sesi: #${(session.id || 'WID-001').slice(-7).toUpperCase()}`;
+
+  document.getElementById('receiptViewModal')?.classList.add('active');
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+/**
+ * Eksekusi Cetak Struk (window.print)
+ */
+function printReceiptSlip() {
+  feedback.tap();
+  window.print();
 }
 
 // LocalStorage helpers
@@ -1498,6 +1904,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   updateClock();
   setInterval(updateClock, 30000);
+
+  // Inisialisasi default date picker ke hari ini (YYYY-MM-DD)
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  if (!APP_STATE.shoppingDate) {
+    APP_STATE.shoppingDate = todayDateStr;
+  }
+  const setupDate = document.getElementById('setupDateInput');
+  if (setupDate) setupDate.value = APP_STATE.shoppingDate;
+  const sessionDate = document.getElementById('sessionShoppingDatePicker');
+  if (sessionDate) sessionDate.value = APP_STATE.shoppingDate;
 
   // 1. Fallback Offline: Muat data troli lokal terlebih dahulu (F5 / sinyal lemah)
   const hasLocalActiveSession = loadActiveSessionFromStorage();
