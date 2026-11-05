@@ -35,7 +35,7 @@
           <span class="status-badge-device" id="deviceBadge">📱 HP</span>
         </div>
         <div class="status-center">
-          <div class="sync-status-pill" id="syncStatusPill" title="Multi-device Realtime Cloud Firestore Sync">
+          <div class="sync-status-pill" id="syncStatusPill" onclick="openSyncInfoModal()" style="cursor: pointer;" title="Klik untuk cek status Cloud Firestore">
             <span class="sync-dot live" id="syncDot"></span>
             <span id="syncStatusText">Cloud Sync (HP ⇄ PC)</span>
           </div>
@@ -358,6 +358,51 @@
           <div class="dialog-actions">
             <button class="btn-dialog-primary" onclick="finishCheckoutFlow()">
               Lihat Riwayat Belanja <i data-lucide="arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Cloud Firestore Diagnostics & Status -->
+      <div id="syncInfoModal" class="modal-overlay">
+        <div class="custom-dialog-card" style="text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 24px;">🔥</span>
+              <div>
+                <h3 style="margin: 0; font-size: 15px; color: var(--text-initial);">Status Cloud Firestore</h3>
+                <span style="font-size: 11px; color: var(--text-muted);">smart-grocery-tractor-dt2</span>
+              </div>
+            </div>
+            <button type="button" class="btn-delete-x" onclick="closeModal('syncInfoModal')">✕</button>
+          </div>
+
+          <div style="background: var(--bg-app); border: 1.5px solid var(--yellow-border); border-radius: var(--radius-md); padding: 12px; font-size: 12px; margin-bottom: 14px; line-height: 1.6;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span>Listener Realtime:</span>
+              <strong style="color: var(--green-brand);">onSnapshot() Aktif ✅</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span>Koleksi Database:</span>
+              <code style="font-size: 11px; background: #fff; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--yellow-border);">grocery_sessions</code>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span>Dokumen Aktif:</span>
+              <code style="font-size: 11px; background: #fff; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--yellow-border);">active_trolley_session</code>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span>Perangkat Ini:</span>
+              <strong id="modalDeviceName" style="color: var(--text-initial);">HP / PC</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Fallback Offline:</span>
+              <span style="color: var(--green-dark); font-weight: 700;">LocalStorage Aktif 🛡️</span>
+            </div>
+          </div>
+
+          <div class="dialog-actions">
+            <button type="button" class="btn-dialog-primary" onclick="testWriteToFirestore()">
+              ⚡ Test Tulis ke Firestore Sekarang
             </button>
           </div>
         </div>

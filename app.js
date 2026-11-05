@@ -447,6 +447,46 @@ function initRealtimeSync() {
   });
 }
 
+function openSyncInfoModal() {
+  const modal = document.getElementById('syncInfoModal');
+  const devEl = document.getElementById('modalDeviceName');
+  if (devEl && window.FirebaseSync) {
+    devEl.textContent = window.FirebaseSync.getDeviceId();
+  }
+  if (modal) modal.classList.add('active');
+}
+
+async function testWriteToFirestore() {
+  if (!window.FirebaseSync || !window.FirebaseSync.isInitialized()) {
+    showToast('Firebase belum terhubung!', 'danger');
+    return;
+  }
+  showToast('Mengirim data test ke Cloud Firestore...', 'info');
+  const ok = await window.FirebaseSync.updateSession(APP_STATE.sessionId, {
+    storeLocation: {
+      region: APP_STATE.selectedRegion || 'Jakarta Barat',
+      supermarket: APP_STATE.selectedSupermarket || { id: 'lotte-puri', name: 'Lotte Mart Grocery - Puri indah' },
+      supermarketId: APP_STATE.selectedSupermarket ? APP_STATE.selectedSupermarket.id : 'lotte-puri',
+      supermarketName: APP_STATE.selectedSupermarket ? APP_STATE.selectedSupermarket.name : 'Lotte Mart Grocery - Puri indah'
+    },
+    shoppingDate: new Date().toISOString(),
+    walletLimit: Number(APP_STATE.budget || 500000),
+    items: APP_STATE.cart.length > 0 ? APP_STATE.cart : [
+      { id: 'beras-5kg', name: 'Beras Rojolele / Ramos 5 Kg', effectivePrice: 66600, originalPrice: 74000, discount: 0.1, unit: '5 Kg', quantity: 1 },
+      { id: 'telur-1kg', name: 'Telur Ayam Negeri Fresh 1 Kg', effectivePrice: 31000, originalPrice: 31000, discount: 0, unit: '1 Kg', quantity: 1 }
+    ],
+    totalSpent: getCartTotal() || 97600,
+    remainingBudget: APP_STATE.budget ? Math.max(0, APP_STATE.budget - getCartTotal()) : 402400,
+    status: 'shopping'
+  });
+
+  if (ok) {
+    showToast('✨ Berhasil ditulis ke Cloud Firestore! Cek konsol Firebase sekarang.', 'success');
+  } else {
+    showToast('⚠️ Gagal menulis: Periksa Rules di Firebase Console!', 'danger');
+  }
+}
+
 // =============================================================================
 // 3. AUDIO & HAPTIC SYNTHESIZER (Tanpa File Eksternal)
 // =============================================================================
