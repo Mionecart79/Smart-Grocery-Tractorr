@@ -219,6 +219,23 @@ window.FirebaseSync = {
   /**
    * Reset data sesi aktif di Firestore saat logout
    */
+  clearAllHistory: async () => {
+    if (!isInitialized || !db) return false;
+    try {
+      const historyColRef = collection(db, 'grocery_history');
+      const snapshot = await getDocs(historyColRef);
+      const deletePromises = [];
+      snapshot.forEach((docSnap) => {
+        deletePromises.push(deleteDoc(docSnap.ref));
+      });
+      await Promise.all(deletePromises);
+      return true;
+    } catch (err) {
+      console.warn('[Firebase] Gagal menghapus history di Firestore:', err);
+      return false;
+    }
+  },
+
   resetSession: async (sessionId) => {
     if (!isInitialized || !db) return false;
 
