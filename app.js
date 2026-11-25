@@ -438,7 +438,7 @@ function initRealtimeSync() {
 
   // Pasang onSnapshot listener untuk riwayat belanja
   window.FirebaseSync.subscribeToHistory((remoteHistory) => {
-    if (Array.isArray(remoteHistory) && remoteHistory.length > 0) {
+    if (Array.isArray(remoteHistory)) {
       APP_STATE.history = remoteHistory;
       saveHistoryToStorage();
       if (APP_STATE.currentTab === 'history') {
@@ -2107,6 +2107,129 @@ function executeLogout() {
   showToast('Sesi belanja direset. Silakan pilih supermarket baru.', 'warning');
 }
 
+
+// =============================================================================
+// 12B. DESKTOP FORMAT SWITCHER & RESET SEMUA DATA KE AWAL
+// =============================================================================
+
+function toggleDesktopFormat() {
+  const wrapper = document.querySelector('.mobile-wrapper');
+  const formatBtn = document.getElementById('desktopFormatBtn');
+  const formatLabel = document.getElementById('desktopFormatLabel');
+  const iconWrap = document.getElementById('desktopFormatIconWrapper');
+  
+  if (!wrapper) return;
+  feedback.tap();
+  
+  const isWide = wrapper.classList.toggle('format-wide');
+  
+  if (isWide) {
+    if (formatLabel) formatLabel.textContent = 'Format: Lebar';
+    if (formatBtn) formatBtn.classList.add('active-wide');
+    if (iconWrap) iconWrap.innerHTML = '<i data-lucide="monitor"></i>';
+    localStorage.setItem('widihh_screen_format', 'wide');
+    showToast('Tampilan dialihkan ke Format: Lebar', 'info');
+  } else {
+    if (formatLabel) formatLabel.textContent = 'Format: 430px Mobile';
+    if (formatBtn) formatBtn.classList.remove('active-wide');
+    if (iconWrap) iconWrap.innerHTML = '<i data-lucide="smartphone"></i>';
+    localStorage.setItem('widihh_screen_format', 'mobile');
+    showToast('Tampilan dialihkan ke Format: 430px Mobile', 'info');
+  }
+  
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function initDesktopFormat() {
+  const saved = localStorage.getItem('widihh_screen_format');
+  const wrapper = document.querySelector('.mobile-wrapper');
+  const formatBtn = document.getElementById('desktopFormatBtn');
+  const formatLabel = document.getElementById('desktopFormatLabel');
+  const iconWrap = document.getElementById('desktopFormatIconWrapper');
+  
+  if (saved === 'wide' && wrapper) {
+    wrapper.classList.add('format-wide');
+    if (formatLabel) formatLabel.textContent = 'Format: Lebar';
+    if (formatBtn) formatBtn.classList.add('active-wide');
+    if (iconWrap) iconWrap.innerHTML = '<i data-lucide="monitor"></i>';
+    if (window.lucide) lucide.createIcons();
+  } else {
+    if (formatLabel) formatLabel.textContent = 'Format: 430px Mobile';
+  }
+}
+
+function promptResetAllData() {
+  feedback.tap();
+  document.getElementById('resetAllDataModal')?.classList.add('active');
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+async function executeResetAllData() {
+  closeModal('resetAllDataModal');
+  feedback.tap();
+
+  // 1. Bersihkan LocalStorage
+  clearActiveSessionFromStorage();
+  try {
+    localStorage.removeItem('widihh_grocery_history');
+    localStorage.removeItem('widihh_grocery_plans');
+  } catch (e) {
+    console.warn('Error clearing localStorage:', e);
+  }
+
+  // 2. Bersihkan Realtime Firestore jika terhubung
+  if (window.FirebaseSync && window.FirebaseSync.isInitialized()) {
+    try {
+      window.FirebaseSync.resetSession(APP_STATE.sessionId);
+      if (typeof window.FirebaseSync.clearAllHistory === 'function') {
+        await window.FirebaseSync.clearAllHistory();
+      }
+    } catch (e) {
+      console.warn('Error resetting Firestore session:', e);
+    }
+  }
+
+  // 3. Reset State Aplikasi ke Awal
+  APP_STATE.cart = [];
+  APP_STATE.budget = 0;
+  APP_STATE.selectedSupermarket = null;
+  APP_STATE.selectedRegion = '';
+  APP_STATE.history = [];
+  APP_STATE.plans = [];
+  APP_STATE.searchQuery = '';
+  APP_STATE.activeCategory = 'all';
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  APP_STATE.shoppingDate = todayDateStr;
+
+  // 4. Kembali ke Tampilan Setup Awal (pengguna mesti mengatur anggarannya lagi)
+  document.getElementById('mainAppScreen')?.classList.remove('active-screen');
+  document.getElementById('setupScreen')?.classList.add('active-screen');
+  APP_STATE.currentScreen = 'setup';
+
+  // 5. Reset Form Input Setup
+  const budgetInput = document.getElementById('budgetInput');
+  const regionSelect = document.getElementById('regionSelect');
+  const setupDateInput = document.getElementById('setupDateInput');
+  if (budgetInput) budgetInput.value = '';
+  if (regionSelect) {
+    regionSelect.value = '';
+    handleRegionChange();
+  }
+  if (setupDateInput) setupDateInput.value = todayDateStr;
+
+  // 6. Refresh Semua Tampilan (Riwayat Kosong, Cart Kosong, Badges 0)
+  renderCartList();
+  renderHistoryView();
+  renderPlanView();
+  updateCartAndBudgetDisplays();
+
+  showToast('Semua data berhasil direset ke awal. Silakan atur kembali anggaran belanja.', 'warning');
+}
+
 function closeModal(modalId) {
   document.getElementById(modalId)?.classList.remove('active');
 }
@@ -2196,6 +2319,8 @@ document.addEventListener('DOMContentLoaded', () => {
       initRealtimeSync();
     });
   }
+
+  initDesktopFormat();
 
   // Register Service Worker for PWA
   if ('serviceWorker' in navigator) {

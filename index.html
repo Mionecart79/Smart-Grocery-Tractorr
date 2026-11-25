@@ -24,6 +24,18 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Desktop Top-Right Floating Controls (Outside App Screen, Hidden on Mobile) -->
+  <aside class="desktop-top-bar" id="desktopTopBar">
+    <button type="button" class="desktop-btn desktop-btn-format" id="desktopFormatBtn" onclick="toggleDesktopFormat()" title="Ubah Format Tampilan">
+      <span id="desktopFormatIconWrapper"><i data-lucide="smartphone"></i></span>
+      <span id="desktopFormatLabel">Format: 430px Mobile</span>
+    </button>
+    <button type="button" class="desktop-btn desktop-btn-reset" id="desktopResetBtn" onclick="promptResetAllData()" title="Reset Semua Data ke Awal">
+      <i data-lucide="rotate-ccw"></i>
+      <span>Reset Data</span>
+    </button>
+  </aside>
+
   <!-- Mobile Screen Frame Container (Max 430px, 9:16 Aspect ratio centered on desktop) -->
   <div class="mobile-wrapper">
     <div class="mobile-device">
@@ -418,8 +430,14 @@
           <!-- TAB 3: HISTORY (Riwayat Belanjaan yang Sudah Di-Checkout) -->
           <section id="tabContentHistory" class="tab-view">
             <div class="history-view-header">
-              <h2>Riwayat Belanja Bulanan</h2>
-              <span class="history-subtitle">Catatan pengeluaran tersimpan rapi</span>
+              <div class="history-title-group">
+                <h2>Riwayat Belanja Bulanan</h2>
+                <span class="history-subtitle">Catatan pengeluaran tersimpan rapi</span>
+              </div>
+              <button type="button" class="btn-reset-history" id="btnResetHistoryMobile" onclick="promptResetAllData()" title="Reset Semua Data ke Awal">
+                <i data-lucide="rotate-ccw"></i>
+                <span>Reset Data</span>
+              </button>
             </div>
 
             <!-- History Items Container -->
@@ -778,6 +796,21 @@
           <div class="dialog-actions">
             <button class="btn-dialog-cancel" onclick="closeModal('logoutModal')">Batal</button>
             <button class="btn-dialog-confirm-danger" onclick="executeLogout()">Ya, Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Confirmation Reset Semua Data ke Awal -->
+      <div id="resetAllDataModal" class="modal-overlay">
+        <div class="custom-dialog-card">
+          <div class="dialog-icon-wrap warning">
+            <i data-lucide="alert-triangle"></i>
+          </div>
+          <h3>Reset Semua Data ke Awal?</h3>
+          <p>Anda yakin mau reset semua data ke awal?</p>
+          <div class="dialog-actions">
+            <button type="button" class="btn-dialog-cancel" onclick="closeModal('resetAllDataModal')">Cancel</button>
+            <button type="button" class="btn-dialog-confirm-danger" onclick="executeResetAllData()">Yes</button>
           </div>
         </div>
       </div>
